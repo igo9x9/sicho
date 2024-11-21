@@ -653,9 +653,12 @@ function main(initStones) {
     };
 
     function playToEnd(banArray, isOutput, nextIsBlack) {
+        let depth = 0;
         while (true) {
 
             let ret1;
+
+            depth += 1;
 
             if (!nextIsBlack) {
                 ret1 = whiteTern(banArray);
@@ -668,7 +671,8 @@ function main(initStones) {
             if (ret1.status === "blackWin" || ret1.status === "whiteWin") {
                 return {
                     status: ret1.status,
-                    banArray: banArray
+                    banArray: banArray,
+                    depth: depth,
                 };
             }
 
@@ -679,12 +683,14 @@ function main(initStones) {
                 if (isOutput) consoleBan(banArray, ret);
                 return {
                     status: ret1.status,
-                    banArray: banArray
+                    banArray: banArray,
+                    depth: depth,
                 };
             } else if (ret1.status === "whiteWin") {
                 return {
                     status: ret1.status,
-                    banArray: banArray
+                    banArray: banArray,
+                    depth: depth,
                 };
             }
 
@@ -862,13 +868,29 @@ function main(initStones) {
         
         if (pattern1_spaceCnt <= 2 && pattern2_spaceCnt <= 2) {
             console.log("分岐あり。黒はどちらの手にするか検討開始");
-            // パターン１のほうで最後まで打ち進めてみて、
-            // シチョウ成立する結果ならパターン１に決定
+            // パターン１とパターン２の両方で最後まで打ち進めてみて、
+            // どちらもシチョウ成立する結果なら手数が少ない方を採用
+
+            const banArray1 = IgoUtil.cloneBanArray(banArray);
+            IgoUtil.setCellByPosition(banArray1, spaceArray[0], "B");
+            console.log("黒番、パターン１を試してみる");
+            const ret1 = playToEnd(banArray1, false);
+
             const banArray2 = IgoUtil.cloneBanArray(banArray);
             IgoUtil.setCellByPosition(banArray2, spaceArray[0], "B");
-            console.log("黒番、パターン１を試してみる");
-            const ret = playToEnd(banArray2, false);
-            if (ret.status === "blackWin") {
+            console.log("黒番、パターン２を試してみる");
+            const ret2 = playToEnd(banArray2, false);
+
+            // どちらも成立する場合
+            if (ret1.status === "blackWin" && ret2.status === "blackWin") {
+                if (ret1.depth < ret2.depth) {
+                    console.log("黒番、パターン１に決定");
+                    IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
+                } else {
+                    console.log("黒番、パターン２に決定");
+                    IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
+                }
+            } else if (ret1.status === "blackWin") {
                 console.log("黒番、パターン１に決定");
                 IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
             } else {
@@ -908,22 +930,5 @@ const kifu = [
     " BWB     ",
     "  B      ",
     "         ",
-
-    // "  B W ",
-    // "  BW W",
-    // "B W WB",
-    // "BW W B",
-    // "WB B  ",
-    // "WW B  ",
-
-    // "         ",
-    // "       BB",
-    // " W    BWW",
-    // "B   BB  B",
-    // "B   B W B",
-    // "     W   ",
-    // "   BW    ",
-    // "         ",
-    // "         ",
 ];
 
