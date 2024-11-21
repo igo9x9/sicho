@@ -166,9 +166,8 @@ phina.define('GameScene', {
 
         // 問題を生成＆表示
         function showQuestion() {
-            // @@
-            // const initStones = createQuestion(3);
-            const initStones = {blackStones:[{x:6, y: 2}, {x: 7, y: 2}], whiteStones:[{x:4,y:0},{x:5,y:1}]};
+            const initStones = createQuestion(3);
+            // const initStones = {blackStones:[{x:6, y: 2}, {x: 7, y: 2}], whiteStones:[{x:4,y:0},{x:5,y:1}]};
             const mainRet = main(initStones);
             pages = mainRet.pages;
             result = mainRet.result;
