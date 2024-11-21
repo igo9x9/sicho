@@ -167,6 +167,7 @@ phina.define('GameScene', {
         // 問題を生成＆表示
         function showQuestion() {
             const initStones = createQuestion(3);
+            // const initStones = {blackStones:[{x:4, y: 1}, {x: 7, y: 3}], whiteStones:[{x:6,y:3},{x:6,y:4}]};
             const mainRet = main(initStones);
             pages = mainRet.pages;
             result = mainRet.result;
@@ -703,32 +704,48 @@ function main(initStones) {
         // 黒石を抜く手がある場合、その座標
         let nukiPosition = null;
 
-        // 黒石を１つずつ、三方向が全て白石または盤外である黒石（アタリ状態の黒石）を探す
+        // // 黒石を１つずつ、三方向が全て白石または盤外である黒石（アタリ状態の黒石）を探す
+        // for (let i = 0; i < blackStones.length; i++) {
+        //     const blackStone = blackStones[i];
+        //     const x = blackStone.x;
+        //     const y = blackStone.y;
+        //     const positions = [{x: x, y: y - 1}, {x: x, y: y + 1}, {x: x - 1, y: y}, {x: x + 1, y: y}];
+        //     let dame = 4;
+        //     let spacePosition = null;
+        //     for (let n = 0; n < positions.length; n ++) {
+        //         const stone = IgoUtil.getCellByPosition(banArray, positions[n]);
+        //         if (stone === "W" || stone === null) {
+        //             dame -= 1;
+        //         } else if (stone === " ") {
+        //             spacePosition = positions[n];
+        //         }
+        //     }
+        //     // dameが1ということは、アタリ状態である
+        //     // ただしspacePositionがnullだったら黒石と連結しているということなので、アタリ状態ではない
+        //     if (dame === 1 && spacePosition !== null) {
+        //         nukiPosition = {
+        //             white: spacePosition,
+        //             black: blackStone,
+        //         };
+        //     }
+        // }
+
+        // あと一手で黒を取れる座標を探す
+        // 黒石をひとつずつ、連を取得してその空点が１つであるものを探して、見つかったら抜ける
         for (let i = 0; i < blackStones.length; i++) {
+
             const blackStone = blackStones[i];
-            const x = blackStone.x;
-            const y = blackStone.y;
-            const positions = [{x: x, y: y - 1}, {x: x, y: y + 1}, {x: x - 1, y: y}, {x: x + 1, y: y}];
-            let dame = 4;
-            let spacePosition = null;
-            for (let n = 0; n < positions.length; n ++) {
-                const stone = IgoUtil.getCellByPosition(banArray, positions[n]);
-                if (stone === "W" || stone === null) {
-                    dame -= 1;
-                } else if (stone === " ") {
-                    spacePosition = positions[n];
-                }
-            }
-            // dameが1ということは、アタリ状態である
-            // ただしspacePositionがnullだったら黒石と連結しているということなので、アタリ状態ではない
-            if (dame === 1 && spacePosition !== null) {
+            const blackRenArray = IgoUtil.getRenArray(banArray, blackStone);
+            const blackSpaceArray = IgoUtil.getSpaceArray(banArray, blackRenArray);
+
+            if (blackSpaceArray.length === 1) {
                 nukiPosition = {
-                    white: spacePosition,
+                    white: blackSpaceArray[0],
                     black: blackStone,
                 };
+                break;
             }
         }
-
 
         // 連の周囲の空点を取得する
         const spaceArray = IgoUtil.getSpaceArray(banArray, renArray);
@@ -891,5 +908,22 @@ const kifu = [
     " BWB     ",
     "  B      ",
     "         ",
+
+    // "  B W ",
+    // "  BW W",
+    // "B W WB",
+    // "BW W B",
+    // "WB B  ",
+    // "WW B  ",
+
+    // "         ",
+    // "       BB",
+    // " W    BWW",
+    // "B   BB  B",
+    // "B   B W B",
+    // "     W   ",
+    // "   BW    ",
+    // "         ",
+    // "         ",
 ];
 
