@@ -1,9 +1,10 @@
 phina.globalize();
 
-const version = "1.1";
+const version = "1.2";
 
 const info = "ロジックは未熟ですので\n結果は疑ってください";
 
+let wait = false;
 
 phina.define('TitleScene', {
     superClass: 'DisplayScene',
@@ -181,8 +182,11 @@ phina.define('GameScene', {
         // 手順を自動再生
         function drawStonesAuto(pages, pageIndex) {
 
+            wait = true;
+
             if (pageIndex === pages.length) {
                 showResult();
+                wait = false;
                 return;
             }
 
@@ -292,6 +296,8 @@ phina.define('GameScene', {
             strokeWidth: 8,
         }).addChildTo(this).setPosition(this.gridX.center(3), this.gridY.center(2.7)).hide();
         backButton.on("pointstart", () => {
+            if (!backButton.visible) return;
+            if (wait) return;
             if (pageIndex === 0) return;
             pageIndex -= 1;
             drawStones(pages[pageIndex]);
@@ -308,6 +314,8 @@ phina.define('GameScene', {
             strokeWidth: 8,
         }).addChildTo(this).setPosition(this.gridX.center(5.6), this.gridY.center(2.7)).hide();
         forwardButton.on("pointstart", () => {
+            if (!forwardButton.visible) return;
+            if (wait) return;
             if (pageIndex === pages.length - 1) return;
             pageIndex += 1;
             drawStones(pages[pageIndex]);
@@ -330,6 +338,8 @@ phina.define('GameScene', {
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.7)).hide();
         nextButton.on("pointstart", () => {
+            if (!nextButton.visible) return;
+            if (wait) return;
             // 問題を生成＆表示
             hideResult();
             showQuestion();
@@ -345,6 +355,8 @@ phina.define('GameScene', {
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(5));
         yesButton.on("pointstart", () => {
+            if (!yesButton.visible) return;
+            if (wait) return;
             // 手順を再生
             drawStonesAuto(pages, 0);
             userChoise = true;
@@ -369,6 +381,8 @@ phina.define('GameScene', {
             fill: "Chocolate",
         }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(5));
         noButton.on("pointstart", () => {
+            if (wait) return;
+            if (!noButton.visible) return;
             // 手順を再生
             drawStonesAuto(pages, 0);
             userChoise = false;
