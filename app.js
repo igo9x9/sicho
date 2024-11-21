@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.0";
+const version = "1.1";
 
-const info = "頑張って作りましたが\nバグがあると思いますので\n結果は疑ってください";
+const info = "ロジックは未熟ですので\n結果は疑ってください";
 
 
 phina.define('TitleScene', {
@@ -35,7 +35,10 @@ phina.define('TitleScene', {
 
         this.setInteractive(true);
         this.on("pointstart", () => {
-            self.exit("GameScene");
+            mouse.tweener.by({y:-20}, 100).by({y:20}, 100)
+            .call(function() {
+                self.exit("GameScene");
+            }).play();
         });
 
         const mouse = Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
