@@ -166,8 +166,9 @@ phina.define('GameScene', {
 
         // 問題を生成＆表示
         function showQuestion() {
-            const initStones = createQuestion(3);
-            // const initStones = {blackStones:[{x:4, y: 1}, {x: 7, y: 3}], whiteStones:[{x:6,y:3},{x:6,y:4}]};
+            // @@
+            // const initStones = createQuestion(3);
+            const initStones = {blackStones:[{x:6, y: 2}, {x: 7, y: 2}], whiteStones:[{x:4,y:0},{x:5,y:1}]};
             const mainRet = main(initStones);
             pages = mainRet.pages;
             result = mainRet.result;
@@ -877,26 +878,27 @@ function main(initStones) {
             const ret1 = playToEnd(banArray1, false);
 
             const banArray2 = IgoUtil.cloneBanArray(banArray);
-            IgoUtil.setCellByPosition(banArray2, spaceArray[0], "B");
+            IgoUtil.setCellByPosition(banArray2, spaceArray[1], "B");
             console.log("黒番、パターン２を試してみる");
             const ret2 = playToEnd(banArray2, false);
 
             // どちらも成立する場合
             if (ret1.status === "blackWin" && ret2.status === "blackWin") {
                 if (ret1.depth < ret2.depth) {
-                    console.log("黒番、パターン１に決定");
+                    console.log("黒番、パターン１に決定（深さで）");
                     IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
                 } else {
-                    console.log("黒番、パターン２に決定");
+                    console.log("黒番、パターン２に決定（深さで）");
                     IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
                 }
             } else if (ret1.status === "blackWin") {
-                console.log("黒番、パターン１に決定");
+                console.log("黒番、パターン１に決定（成立するのはこれ）");
                 IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
             } else {
-                console.log("黒番、パターン２に決定");
+                console.log("黒番、パターン２に決定（成立するのはこれ）");
                 IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
             }
+
         } else if (pattern1_spaceCnt <= 2) {
             IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
         } else {
