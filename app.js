@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.3";
+const version = "1.4";
 
-const info = "白番のロジックを改善しました";
+const info = "連続正解数を\nカウントするようになりました";
 
 let wait = false;
 
@@ -44,6 +44,20 @@ phina.define('TitleScene', {
 
         const mouse = Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
 
+        const saveData = localStorage.getItem("sicho");
+        if (saveData) {
+            combo = JSON.parse(saveData).combo;
+
+            if (combo > 1) {
+                Label({
+                    text: combo + "連勝中!",
+                    fontSize: 30,
+                    fontWeight: 800,
+                    fill: "red",
+                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1));
+            }
+        }
+
         Label({
             text: "TAP TO START",
             fontSize: 20,
@@ -61,7 +75,13 @@ phina.define('MyButton', {
         const self = this;
 
         this.on("pointstart", () => {
-            self.tweener.by({y: -10}, 50).wait(10).by({y: 10}, 50).play();
+            self.tweener.by({y: -20}, 80, "easeOutExpo").wait(10).by({y: 20}, 80, "easeInExpo").wait(100)
+            .call(() => {
+                if (param.callback) {
+                    param.callback();
+                }
+            })
+            .play();
         })
     },
 });
@@ -77,6 +97,12 @@ phina.define('GameScene', {
         let result;
         let userChoise;
         let pageIndex = 0;
+        let combo = 0;
+
+        saveData = localStorage.getItem("sicho");
+        if (saveData) {
+            combo = JSON.parse(saveData).combo;
+        }
 
         this.backgroundColor = "PeachPuff";
 
@@ -276,6 +302,29 @@ phina.define('GameScene', {
             forwardButton.show();
             nextButton.show();
 
+            if (userChoise === true && result === "blackWin" || userChoise === false && result === "whiteWin") {
+                combo += 1;
+            } else {
+                combo = 0;
+            }
+            localStorage.setItem("sicho", "{\"combo\":" + combo + "}");
+            comboLabel.text = combo + "連勝中!";
+            const comments = ["", "すごい!", "まさかの!", "驚異的!", "夢の!", "名人!", "前人未踏!", "世界クラス!", "超人的!", "無敵!"];
+            if (combo >= 100) {
+                comboCommentLabel.text = "神の領域!";
+            } else if (combo >= 10) {
+                comboCommentLabel.text = comments[Number(String(combo / 10).charAt(0))];
+            } else {
+                comboCommentLabel.text = "";
+            }
+            if (combo > 1) {
+                comboLabel.show();
+                comboCommentLabel.show();
+            } else {
+                comboLabel.hide();
+                comboCommentLabel.hide();
+            }
+
             resultLabel.text = result === "blackWin" ? "取れている!" : "取れていない!";
             resultLabel.show();
         }
@@ -291,7 +340,7 @@ phina.define('GameScene', {
             noButton.show();
         }
 
-        const backButton = MyButton({
+        const backButton = Button({
             text: "<",
             width: 80,
             height: 50,
@@ -306,10 +355,13 @@ phina.define('GameScene', {
             if (wait) return;
             if (pageIndex === 0) return;
             pageIndex -= 1;
-            drawStones(pages[pageIndex]);
+            backButton.tweener.by({y: -10}, 50).wait(10).by({y: 10}, 50)
+            .call(() => {
+                drawStones(pages[pageIndex]);
+            }).play();
         });
 
-        const forwardButton = MyButton({
+        const forwardButton = Button({
             text: ">",
             width: 80,
             height: 50,
@@ -324,7 +376,10 @@ phina.define('GameScene', {
             if (wait) return;
             if (pageIndex === pages.length - 1) return;
             pageIndex += 1;
-            drawStones(pages[pageIndex]);
+            forwardButton.tweener.by({y: -10}, 50).wait(10).by({y: 10}, 50)
+            .call(() => {
+                drawStones(pages[pageIndex]);
+            }).play();
         });
 
         const resultLabel = Label({
@@ -342,14 +397,31 @@ phina.define('GameScene', {
             stroke: "black",
             fontColor: "black",
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.7)).hide();
-        nextButton.on("pointstart", () => {
-            if (!nextButton.visible) return;
-            if (wait) return;
-            // 問題を生成＆表示
-            hideResult();
-            showQuestion();
-        });
+            callback: () => {
+                if (!nextButton.visible) return;
+                if (wait) return;
+                // 問題を生成＆表示
+                hideResult();
+                showQuestion();
+            },
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5)).hide();
+
+        const comboCommentLabel = Label({
+            text: "すごい!",
+            fontWeight: 800,
+            fontSize: 30,
+            fill: "crimson",
+            stroke: "white",
+            strokeWidth: 4,
+        }).addChildTo(nextButton).setPosition(-115, -50).setRotation(-25);
+        const comboLabel = Label({
+            text: "2連勝中!",
+            fontWeight: 800,
+            fontSize: 30,
+            fill: "crimson",
+            stroke: "white",
+            strokeWidth: 4,
+        }).addChildTo(nextButton).setPosition(-100, -25).setRotation(-25);
 
         const yesButton = MyButton({
             text: "取れている",
@@ -359,22 +431,22 @@ phina.define('GameScene', {
             stroke: "black",
             fontSize: 40,
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(5));
-        yesButton.on("pointstart", () => {
-            if (!yesButton.visible) return;
-            if (wait) return;
-            // 手順を再生
-            drawStonesAuto(pages, 0);
-            userChoise = true;
-            yesButton.hide();
-            noButton.hide();
-
-            choiseLabel.text = "取れているかな？";
-            choiseLabel.show();
-
-            helpImage.hide();
-            helpLabel.hide();
-        });
+            callback: () => {
+                if (!yesButton.visible) return;
+                if (wait) return;
+                // 手順を再生
+                drawStonesAuto(pages, 0);
+                userChoise = true;
+                yesButton.hide();
+                noButton.hide();
+    
+                choiseLabel.text = "取れているかな？";
+                choiseLabel.show();
+    
+                helpImage.hide();
+                helpLabel.hide();
+            },
+        }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(4));
 
         const noButton = MyButton({
             text: "取れていない",
@@ -385,22 +457,22 @@ phina.define('GameScene', {
             fontSize: 40,
             fontWeight: 800,
             fill: "Chocolate",
-        }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(5));
-        noButton.on("pointstart", () => {
-            if (wait) return;
-            if (!noButton.visible) return;
-            // 手順を再生
-            drawStonesAuto(pages, 0);
-            userChoise = false;
-            yesButton.hide();
-            noButton.hide();
-
-            choiseLabel.text = "取れていないかな？";
-            choiseLabel.show();
-
-            helpImage.hide();
-            helpLabel.hide();
-        });
+            callback: () => {
+                if (wait) return;
+                if (!noButton.visible) return;
+                // 手順を再生
+                drawStonesAuto(pages, 0);
+                userChoise = false;
+                yesButton.hide();
+                noButton.hide();
+    
+                choiseLabel.text = "取れていないかな？";
+                choiseLabel.show();
+    
+                helpImage.hide();
+                helpLabel.hide();
+            },
+        }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(4));
 
         const choiseLabel = Label({
             text: "",
@@ -418,6 +490,7 @@ ASSETS = {
         "arrow": "img/arrow.png",
         "mouse": "img/mouse.png",
         "mouse2": "img/mouse2.png",
+        "frog": "img/frog.png",
     }
 };
 
