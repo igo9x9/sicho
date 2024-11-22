@@ -82,12 +82,11 @@ phina.define('GameScene', {
 
         // 碁盤を生成
         const ban = RectangleShape({
-            fill: "DarkGoldenrod",
-            // fill: "PeachPuff",
+            fill: "Peru",
             strokeWidth: 0,
             width: 630,
             height: 630,
-        }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center(-2.5));
+        }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center(-2.65));
         const grid = Grid({width: ban.width - 100, columns: 8});
         createGoban(9);
         const banLayer = RectangleShape({
@@ -98,7 +97,7 @@ phina.define('GameScene', {
         }).addChildTo(ban).setPosition(0, 0);
 
         // 説明文
-        const helpImage = Sprite("arrow").addChildTo(this).setPosition(260, 490).setRotation(90);
+        const helpImage = Sprite("arrow").addChildTo(this).setPosition(260, 480).setRotation(90);
         const helpLabel = LabelArea({
             text: "この白石は\nシチョウで取れていますか？",
             fontSize: 28,
@@ -160,8 +159,8 @@ phina.define('GameScene', {
             const stone = CircleShape({
                 fill: color,
                 radius: grid.unitWidth / 2 - 2,
-                strokeWidth: 0,
-                // stroke: "black",
+                strokeWidth: 4,
+                stroke: "black",
                 x: x,
                 y, y,
             });
@@ -173,7 +172,13 @@ phina.define('GameScene', {
             // @@
             const initStones = createQuestion(3);
             // const initStones = {blackStones:[{x:4, y: 3}, {x: 7, y: 2}], whiteStones:[{x:5,y:4},{x:5,y:1}]};
-            const mainRet = main(initStones);
+            let mainRet;
+            while (true) {
+                mainRet = main(initStones);
+                if (mainRet.status !== "cancel") {
+                    break;
+                }
+            }
             pages = mainRet.pages;
             result = mainRet.result;
             drawStones(pages[0]);
@@ -290,7 +295,7 @@ phina.define('GameScene', {
             text: "<",
             width: 80,
             height: 50,
-            fill: "DarkGoldenrod",
+            fill: "white",
             fontColor: "black",
             fontWeight: 800,
             stroke: "black",
@@ -308,7 +313,7 @@ phina.define('GameScene', {
             text: ">",
             width: 80,
             height: 50,
-            fill: "DarkGoldenrod",
+            fill: "white",
             fontColor: "black",
             fontWeight: 800,
             stroke: "black",
@@ -661,8 +666,10 @@ function main(initStones) {
 
     if (result.status === "blackWin") {
         console.log("シチョウ成立！")
-    } else {
+    } else if (result.status === "whiteWin") {
         console.log("シチョウ不成立！")
+    } else {
+        console.log("中止！")
     }
 
     return {
@@ -671,7 +678,18 @@ function main(initStones) {
     };
 
     function playToEnd(banArray, isOutput, nextIsBlack) {
+
         let depth = 0;
+
+        // 探索の深さが50を超えたら中止する（コウで無限ループになっている可能性）
+        if (depth > 50) {
+            return {
+                status: "cancel",
+                banArray: null,
+                depth: depth,
+            };
+        }
+
         while (true) {
 
             let ret1 = {};
@@ -679,22 +697,22 @@ function main(initStones) {
             depth += 1;
 
             if (!nextIsBlack) {
-                ret1 = whiteTern(banArray);
+                ret1 = whiteTern(banArray, depth);
                 if (isOutput) consoleBan(banArray, ret);
             } else {
                 if (isOutput) consoleBan(banArray, ret);
             }
             nextIsBlack = false;
 
-            if (ret1.status === "blackWin" || ret1.status === "whiteWin") {
+            if (ret1.status === "blackWin" || ret1.status === "whiteWin" || ret1.status === "cancel") {
                 return {
                     status: ret1.status,
                     banArray: banArray,
-                    depth: depth,
+                    depth: ret1.depth,
                 };
             }
 
-            ret1 = blackTern(banArray);
+            ret1 = blackTern(banArray, depth);
 
             if (ret1.status === "blackWin") {
                 IgoUtil.removeRen(banArray, startPosition);
@@ -702,13 +720,19 @@ function main(initStones) {
                 return {
                     status: ret1.status,
                     banArray: banArray,
-                    depth: depth,
+                    depth: ret1.depth,
                 };
             } else if (ret1.status === "whiteWin") {
                 return {
                     status: ret1.status,
                     banArray: banArray,
-                    depth: depth,
+                    depth: ret1.depth,
+                };
+            } else if (ret1.status === "cancel") {
+                return {
+                    status: ret1.status,
+                    banArray: banArray,
+                    depth: ret1.depth,
                 };
             }
 
@@ -717,7 +741,7 @@ function main(initStones) {
     }
 
     // 白のターン
-    function whiteTern(banArray) {
+    function whiteTern(banArray, depth) {
 
         // 連を取得する
         const renArray = IgoUtil.getRenArray(banArray, startPosition);
@@ -727,32 +751,6 @@ function main(initStones) {
 
         // 黒石を抜く手がある場合、その座標
         let nukiPosition = null;
-
-        // // 黒石を１つずつ、三方向が全て白石または盤外である黒石（アタリ状態の黒石）を探す
-        // for (let i = 0; i < blackStones.length; i++) {
-        //     const blackStone = blackStones[i];
-        //     const x = blackStone.x;
-        //     const y = blackStone.y;
-        //     const positions = [{x: x, y: y - 1}, {x: x, y: y + 1}, {x: x - 1, y: y}, {x: x + 1, y: y}];
-        //     let dame = 4;
-        //     let spacePosition = null;
-        //     for (let n = 0; n < positions.length; n ++) {
-        //         const stone = IgoUtil.getCellByPosition(banArray, positions[n]);
-        //         if (stone === "W" || stone === null) {
-        //             dame -= 1;
-        //         } else if (stone === " ") {
-        //             spacePosition = positions[n];
-        //         }
-        //     }
-        //     // dameが1ということは、アタリ状態である
-        //     // ただしspacePositionがnullだったら黒石と連結しているということなので、アタリ状態ではない
-        //     if (dame === 1 && spacePosition !== null) {
-        //         nukiPosition = {
-        //             white: spacePosition,
-        //             black: blackStone,
-        //         };
-        //     }
-        // }
 
         // あと一手で黒を取れる座標を探す
         // 黒石をひとつずつ、連を取得してその空点が１つであるものを探して、見つかったら抜ける
@@ -777,7 +775,10 @@ function main(initStones) {
         // チェック
         if (spaceArray.length === 0) {
             console.log("白のターンで空点がない");
-            return {status: "blackWin"};
+            return {
+                status: "blackWin",
+                depth: depth,
+            };
         }
         if (spaceArray.length > 1) {
             throw("白のターンで空点が複数ある、想定外");
@@ -793,16 +794,25 @@ function main(initStones) {
                 // 黒石を取る
                 IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
                 IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
-                return {status: "continue"};
+                return {
+                    status: "continue",
+                    depth: depth,
+                };
             }
-            return {status: "blackWin"};
+            return {
+                status: "blackWin",
+                depth: depth,
+            };
         }
 
 
         if (nukiPosition === null) {
             // 空点に打つ
             IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
-            return {status: "continue"};
+            return {
+                status: "continue",
+                depth: depth,
+            };
         }
 
         // この時点で、空点の１つは黒を抜く手、もう１つは逃げる手
@@ -814,12 +824,26 @@ function main(initStones) {
         IgoUtil.setCellByPosition(banArray1, nukiPosition.black, " ");
         console.log("白番、黒を抜く手を試してみる", nukiPosition);
         const ret1 = playToEnd(banArray1, false, true);
+        // 探索限界チェック
+        if (ret1.status === "cancenl") {
+            return {
+                status: "cancel",
+                depth: depth,
+            }
+        }
 
         // 逃げるだけの手を調べる
         const banArray2 = IgoUtil.cloneBanArray(banArray);
         IgoUtil.setCellByPosition(banArray2, spaceArray[0], "W");
         console.log("白番、逃げる手を試してみる", spaceArray[0]);
         const ret2 = playToEnd(banArray2, false, true);
+        // 探索限界チェック
+        if (ret1.status === "cancenl") {
+            return {
+                status: "cancel",
+                depth: depth,
+            }
+        }
 
         // どちらも成立する場合
         if (ret1.status === "whiteWin" && ret2.status === "whiteWin") {
@@ -828,45 +852,36 @@ function main(initStones) {
                 console.log("白番、黒を抜く手に決定（深さで）", nukiPosition, ret1, ret2);
                 IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
                 IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
+                depth += ret1.depth;
             } else {
                 console.log("白番、逃げる手に決定（深さで）", spaceArray[0], ret1, ret2);
                 IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
+                depth += ret2.depth;
             }
         } else if (ret1.status === "whiteWin") {
             console.log("白番、黒を抜く手に決定（成立するのはこれ）", nukiPosition, ret1, ret2);
             IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
             IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
-        } else {
+            depth += ret1.depth;
+        } else if (ret2.status === "whiteWin") {
             console.log("白番、逃げる手に決定（成立するのはこれ）", spaceArray[0], ret1, ret2);
             IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
+            depth += ret2.depth;
+        } else {
+            console.log("白番、黒を抜く手に決定（成立する手がない）", nukiPosition, ret1, ret2);
+            IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
+            IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
+            depth += ret1.depth;
         }
 
-        // 黒石を取る手がある場合、
-        // まずは空点に打つ手が有効かどうかを調べてから、
-        // シチョウが成立しないのなら黒石を取る手を採用する
-
-        // console.log("白番、黒を取らない手を試してみる");
-        // const banArray2 = IgoUtil.cloneBanArray(banArray);
-        // IgoUtil.setCellByPosition(banArray2, spaceArray[0], "W");
-        // const ret = playToEnd(banArray2, false, true);
-        // if (ret.status === "whiteWin") {
-        //     console.log("白番、黒を取らない手に決定");
-        //     IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
-        // } else {
-        //     console.log("白番、黒を取る手に決定");
-        //     IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
-        //     IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
-        // }        
-
-        // // ややこしいので、もう取れる場合は取る！
-        // IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
-        // IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
-
-        return {status: "continue"};
+        return {
+            status: "continue",
+            depth: depth,
+        };
     }
 
     // 黒のターン
-    function blackTern(banArray) {
+    function blackTern(banArray, depth) {
 
         // 空点を取得する
         const renArray = IgoUtil.getRenArray(banArray, startPosition);
@@ -876,26 +891,41 @@ function main(initStones) {
         if (spaceArray.length !== 2) {
             if (spaceArray.length === 1) {
                 IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
-                return {status: "blackWin"};
+                return {
+                    status: "blackWin",
+                    depth: depth,
+                };
             }
-            return {status: "whiteWin"};
+            return {
+                status: "whiteWin",
+                depth: depth,
+            };
         }
 
         // 自殺手は除外
         if (IgoUtil.canPutBlack(banArray, spaceArray[0]) === false) {
 
             if (IgoUtil.canPutBlack(banArray, spaceArray[1]) === false) {
-                return {status: "whiteWin"};
+                return {
+                    status: "whiteWin",
+                    depth: depth,
+                };
             }
 
             IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
-            return {status: "continue"};
+            return {
+                status: "continue",
+                depth: depth,
+            };
         }
 
         if (IgoUtil.canPutBlack(banArray, spaceArray[1]) === false) {
 
             IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
-            return {status: "continue"};
+            return {
+                status: "continue",
+                depth: depth,
+            };
         }
 
         // その１
@@ -929,27 +959,55 @@ function main(initStones) {
             IgoUtil.setCellByPosition(banArray1, spaceArray[0], "B");
             console.log("黒番、パターン１を試してみる");
             const ret1 = playToEnd(banArray1, false);
+            // 探索限界チェック
+            if (ret1.status === "cancenl") {
+                return {
+                    status: "cancel",
+                    depth: depth,
+                }
+            }
 
             const banArray2 = IgoUtil.cloneBanArray(banArray);
             IgoUtil.setCellByPosition(banArray2, spaceArray[1], "B");
             console.log("黒番、パターン２を試してみる");
             const ret2 = playToEnd(banArray2, false);
+            // 探索限界チェック
+            if (ret2.status === "cancenl") {
+                return {
+                    status: "cancel",
+                    depth: depth,
+                }
+            }
 
             // どちらも成立する場合
             if (ret1.status === "blackWin" && ret2.status === "blackWin") {
                 if (ret1.depth < ret2.depth) {
                     console.log("黒番、パターン１に決定（深さで）");
                     IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
+                    depth += ret1.depth;
                 } else {
                     console.log("黒番、パターン２に決定（深さで）");
                     IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
+                    depth += ret2.depth;
                 }
             } else if (ret1.status === "blackWin") {
                 console.log("黒番、パターン１に決定（成立するのはこれ）");
                 IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
-            } else {
+                depth += ret1.depth;
+            } else if (ret2.status === "blackWin") {
                 console.log("黒番、パターン２に決定（成立するのはこれ）");
                 IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
+                depth += ret2.depth;
+            } else {
+                if (ret2.depth < ret1.depth) {
+                    console.log("黒番、パターン１に決定（成立しないが深さが深いほう）");
+                    IgoUtil.setCellByPosition(banArray, spaceArray[0], "B");
+                    depth += ret1.depth;
+                } else {
+                    console.log("黒番、パターン２に決定（成立しないが深さが深いほう）");
+                    IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
+                    depth += ret2.depth;
+                }
             }
 
         } else if (pattern1_spaceCnt <= 2) {
@@ -958,7 +1016,10 @@ function main(initStones) {
             IgoUtil.setCellByPosition(banArray, spaceArray[1], "B");
         }
 
-        return {status: "continue"};
+        return {
+            status: "continue",
+            depth: depth,
+        };
     }
 
 
