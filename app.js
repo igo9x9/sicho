@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.2";
+const version = "1.3";
 
-const info = "ロジックは未熟ですので\n結果は疑ってください";
+const info = "白番のロジックを改善しました";
 
 let wait = false;
 
@@ -170,8 +170,9 @@ phina.define('GameScene', {
 
         // 問題を生成＆表示
         function showQuestion() {
+            // @@
             const initStones = createQuestion(3);
-            // const initStones = {blackStones:[{x:6, y: 2}, {x: 7, y: 2}], whiteStones:[{x:4,y:0},{x:5,y:1}]};
+            // const initStones = {blackStones:[{x:4, y: 3}, {x: 7, y: 2}], whiteStones:[{x:5,y:4},{x:5,y:1}]};
             const mainRet = main(initStones);
             pages = mainRet.pages;
             result = mainRet.result;
@@ -673,7 +674,7 @@ function main(initStones) {
         let depth = 0;
         while (true) {
 
-            let ret1;
+            let ret1 = {};
 
             depth += 1;
 
@@ -783,10 +784,10 @@ function main(initStones) {
         }
 
         // 自殺手は打てない、ただし、黒を抜く手があるならそれ
-        const banArray2 = IgoUtil.cloneBanArray(banArray);
-        IgoUtil.setCellByPosition(banArray2, spaceArray[0], "W");
-        const renArray2 = IgoUtil.getRenArray(banArray2, startPosition);
-        const spaces = IgoUtil.getSpaceArray(banArray2, renArray2);
+        const banArray0 = IgoUtil.cloneBanArray(banArray);
+        IgoUtil.setCellByPosition(banArray0, spaceArray[0], "W");
+        const renArray2 = IgoUtil.getRenArray(banArray0, startPosition);
+        const spaces = IgoUtil.getSpaceArray(banArray0, renArray2);
         if (spaces.length === 0) {
             if (nukiPosition !== null) {
                 // 黒石を取る
@@ -802,6 +803,42 @@ function main(initStones) {
             // 空点に打つ
             IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
             return {status: "continue"};
+        }
+
+        // この時点で、空点の１つは黒を抜く手、もう１つは逃げる手
+        // どちらを採用するか検討する
+
+        // 黒を抜く手を調べる
+        const banArray1 = IgoUtil.cloneBanArray(banArray);
+        IgoUtil.setCellByPosition(banArray1, nukiPosition.white, "W");
+        IgoUtil.setCellByPosition(banArray1, nukiPosition.black, " ");
+        console.log("白番、黒を抜く手を試してみる", nukiPosition);
+        const ret1 = playToEnd(banArray1, false, true);
+
+        // 逃げるだけの手を調べる
+        const banArray2 = IgoUtil.cloneBanArray(banArray);
+        IgoUtil.setCellByPosition(banArray2, spaceArray[0], "W");
+        console.log("白番、逃げる手を試してみる", spaceArray[0]);
+        const ret2 = playToEnd(banArray2, false, true);
+
+        // どちらも成立する場合
+        if (ret1.status === "whiteWin" && ret2.status === "whiteWin") {
+            // 手順が短い方を採用
+            if (ret1.depth < ret2.depth) {
+                console.log("白番、黒を抜く手に決定（深さで）", nukiPosition, ret1, ret2);
+                IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
+                IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
+            } else {
+                console.log("白番、逃げる手に決定（深さで）", spaceArray[0], ret1, ret2);
+                IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
+            }
+        } else if (ret1.status === "whiteWin") {
+            console.log("白番、黒を抜く手に決定（成立するのはこれ）", nukiPosition, ret1, ret2);
+            IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
+            IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
+        } else {
+            console.log("白番、逃げる手に決定（成立するのはこれ）", spaceArray[0], ret1, ret2);
+            IgoUtil.setCellByPosition(banArray, spaceArray[0], "W");
         }
 
         // 黒石を取る手がある場合、
@@ -821,9 +858,9 @@ function main(initStones) {
         //     IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
         // }        
 
-        // ややこしいので、もう取れる場合は取る！
-        IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
-        IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
+        // // ややこしいので、もう取れる場合は取る！
+        // IgoUtil.setCellByPosition(banArray, nukiPosition.white, "W");
+        // IgoUtil.setCellByPosition(banArray, nukiPosition.black, " ");
 
         return {status: "continue"};
     }
