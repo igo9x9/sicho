@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.4";
+const version = "1.5";
 
-const info = "連続正解数を\nカウントするようになりました";
+const info = "連勝し続けると\nたまに盤面が広くなるようになりました";
 
 let wait = false;
 
@@ -20,19 +20,19 @@ phina.define('TitleScene', {
             fontSize: 50,
             fill: "black",
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-2));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-3));
 
         Label({
             text: "version " + version,
             fontSize: 20,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1.3));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-2.3));
 
         Label({
             text: info,
             fontSize: 22,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(3));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4));
 
         this.setInteractive(true);
         this.on("pointstart", () => {
@@ -46,16 +46,28 @@ phina.define('TitleScene', {
 
         const saveData = localStorage.getItem("sicho");
         if (saveData) {
-            combo = JSON.parse(saveData).combo;
+            const data = JSON.parse(saveData);
+            const combo = data.combo;
+            const maxCombo = data.maxCombo;
+
+            if (maxCombo > 1) {
+                Label({
+                    text: "最高記録 " + maxCombo + "連勝",
+                    fontSize: 20,
+                    // fontWeight: 800,
+                    fill: "black",
+                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1));
+            }
 
             if (combo > 1) {
                 Label({
                     text: combo + "連勝中!",
-                    fontSize: 30,
+                    fontSize: 35,
                     fontWeight: 800,
-                    fill: "red",
-                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1));
+                    fill: "darkred",
+                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1.6));
             }
+
         }
 
         Label({
@@ -98,29 +110,23 @@ phina.define('GameScene', {
         let userChoise;
         let pageIndex = 0;
         let combo = 0;
+        let maxCombo = 0;
 
         saveData = localStorage.getItem("sicho");
         if (saveData) {
-            combo = JSON.parse(saveData).combo;
+            data = JSON.parse(saveData);
+            combo = data.combo ? data.combo : 0;
+            maxCombo = data.maxCombo ? data.maxCombo : 0;
         }
 
         this.backgroundColor = "PeachPuff";
 
-        // 碁盤を生成
-        const ban = RectangleShape({
-            fill: "Peru",
-            strokeWidth: 0,
-            width: 630,
-            height: 630,
-        }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center(-2.65));
-        const grid = Grid({width: ban.width - 100, columns: 8});
-        createGoban(9);
-        const banLayer = RectangleShape({
+        self.baseLayer = RectangleShape({
             fill: "transparent",
             strokeWidth: 0,
-            width: 630,
-            height: 630,
-        }).addChildTo(ban).setPosition(0, 0);
+            width: this.width,
+            height: this.height,
+        }).addChildTo(this).setPosition(0, 0);
 
         // 説明文
         const helpImage = Sprite("arrow").addChildTo(this).setPosition(260, 480).setRotation(90);
@@ -134,6 +140,10 @@ phina.define('GameScene', {
             stroke: "black",
             strokeWidth: 5,
         }).addChildTo(this).setPosition(450, 600);
+        if (combo !== 0) {
+            helpImage.hide();
+            helpLabel.hide();
+        }
 
         const titleButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
         titleButton.setInteractive(true);
@@ -146,15 +156,27 @@ phina.define('GameScene', {
 
         // --------------------------------------------------------------
 
-        // 問題を生成＆表示
+        // 問題を生成
+        createQuestion();
+
+        // 碁盤を表示
+        createGoban(pages[0].length);
+
+        // 問題を表示
         showQuestion();
-
-        // 手順を再生
-        // drawStonesAuto(pages, 0);
-
         
         // 碁盤を描画
         function createGoban(size) {
+
+            // 外枠
+            self.ban = RectangleShape({
+                fill: "Peru",
+                strokeWidth: 0,
+                width: 630,
+                height: 630,
+            }).addChildTo(self.baseLayer).setPosition(self.gridX.center(), self.gridY.center(-2.65));
+            const grid = Grid({width: self.ban.width - (size === 9 ? 100 : (size === 13 ? 80 : 50)), columns: size - 1});
+
             const floor = Math.floor(size / 2);
             (size).times(function(spanX) {
                 var startPoint = Vector2((spanX - floor) * grid.unitWidth, -1 * grid.width / 2),
@@ -164,7 +186,7 @@ phina.define('GameScene', {
                 if (spanX === 0 || spanX === size - 1) {
                     strokeWidth = strokeWidth * 2;
                 }
-                PathShape({paths:[startPoint, endPoint], stroke: "black", strokeWidth: strokeWidth}).addChildTo(ban);
+                PathShape({paths:[startPoint, endPoint], stroke: "black", strokeWidth: strokeWidth}).addChildTo(self.ban);
             });
         
             (size).times(function(spanY) {
@@ -175,38 +197,89 @@ phina.define('GameScene', {
                 if (spanY === 0 || spanY === size - 1) {
                     strokeWidth = strokeWidth * 2;
                 }
-                PathShape({paths:[startPoint, endPoint], stroke: "black", strokeWidth: strokeWidth}).addChildTo(ban);
+                PathShape({paths:[startPoint, endPoint], stroke: "black", strokeWidth: strokeWidth}).addChildTo(self.ban);
             });
+
+            if (size === 9) {
+                addStar(2, 2);
+                addStar(6, 2);
+                addStar(4, 4);
+                addStar(2, 6);
+                addStar(6, 6);
+            } else if (size === 13) {
+                addStar(3, 3);
+                addStar(9, 3);
+                addStar(6, 6);
+                addStar(3, 9);
+                addStar(9, 9);
+            } else if (size === 19) {
+                addStar(3, 3);
+                addStar(9, 3);
+                addStar(15, 3);
+                addStar(3, 9);
+                addStar(9, 9);
+                addStar(15, 9);
+                addStar(3, 15);
+                addStar(9, 15);
+                addStar(15, 15);
+            }
+
+            function addStar(spanX, spanY) {
+                CircleShape({
+                    radius: 5,
+                    fill: "black",
+                    strokeWidth: 0,
+                }).addChildTo(self.ban).setPosition((spanX - floor) * grid.unitWidth, (spanY - floor) * grid.unitWidth);
+            }
+
+            self.banLayer = RectangleShape({
+                fill: "transparent",
+                strokeWidth: 0,
+                width: self.ban.width,
+                height: self.ban.height,
+            }).addChildTo(self.ban).setPosition(0, 0);
+
+            self.banLayer.size = size;
+            self.banLayer.grid = grid;
+
+            return;
         }
 
         // 石を描画
-        function createStone(size, color, x, y) {
-            const floor = Math.floor(size / 2);
+        function createStone(color, x, y) {
+            const floor = Math.floor(self.banLayer.size / 2);
             const stone = CircleShape({
                 fill: color,
-                radius: grid.unitWidth / 2 - 2,
+                radius: self.banLayer.grid.unitWidth / 2 - 2,
                 strokeWidth: 4,
                 stroke: "black",
                 x: x,
                 y, y,
             });
-            stone.addChildTo(banLayer).setPosition(grid.span(x - floor), grid.span(y - floor));
+            stone.addChildTo(self.banLayer).setPosition(self.banLayer.grid.span(x - floor), self.banLayer.grid.span(y - floor));
         };
 
-        // 問題を生成＆表示
-        function showQuestion() {
+        // 問題を生成
+        function createQuestion() {
+            const level = String(combo).slice(-1) === "8" ? 1 : (String(combo).slice(-1) === "9" ? 2 : 0);
+            const size = level === 0 ? 9 : (level === 1 ? 13 : 19);
             // @@
-            const initStones = createQuestion(3);
+            const initStones = createQuestionStones(level);
+            // const initStones = {blackStones:[], whiteStones:[]};
             // const initStones = {blackStones:[{x:4, y: 3}, {x: 7, y: 2}], whiteStones:[{x:5,y:4},{x:5,y:1}]};
             let mainRet;
             while (true) {
-                mainRet = main(initStones);
+                mainRet = main(size, initStones);
                 if (mainRet.status !== "cancel") {
                     break;
                 }
             }
             pages = mainRet.pages;
             result = mainRet.result;
+        }
+
+        // 問題を描画
+        function showQuestion() {
             drawStones(pages[0]);
             pageIndex = pages.length - 1;
         }
@@ -233,32 +306,39 @@ phina.define('GameScene', {
         // 全ての石を描画
         function drawStones(page) {
 
-            banLayer.children.clear();
-            const size = page[0].length;
+            self.banLayer.children.clear();
 
             for (let y = 0; y < page.length; y ++) {
                 const cols = page[y].split("");
                 for (let x = 0; x < cols.length; x++) {
                     if (cols[x] === "W") {
-                        createStone(size, "white", x, y);
+                        createStone("white", x, y);
                     } else if (cols[x] === "B") {
-                        createStone(size, "black", x, y);
+                        createStone("black", x, y);
                     }
                 }
             }
         }
 
         // 問題を作る
-        function createQuestion(level) {
+        // level 0:9路盤 1:13路盤 2:19路盤
+        function createQuestionStones(level) {
 
             const allStones = [];
             const blackStones = [];
             const whiteStones = [];
 
+            const size = level === 0 ? 9 : (level === 1 ? 13 : 19);
+
+            const minX = Math.ceil(size / 2);
+            const maxX = size - 2;
+            const minY = 1;
+            const maxY = Math.ceil(size / 2);
+            
             function white() {
                 let stone;
                 while (true) {
-                    stone = {x: Math.randint(4, 7), y: Math.randint(0, 4)};
+                    stone = {x: Math.randint(minX, maxX), y: Math.randint(minY, maxY)};
                     if (!allStones.find(s => s.x === stone.x && s.y === stone.y)) {
                         break;
                     }
@@ -270,7 +350,7 @@ phina.define('GameScene', {
             function black() {
                 let stone;
                 while (true) {
-                    stone = {x: Math.randint(4, 7), y: Math.randint(0, 4)};
+                    stone = {x: Math.randint(minX, maxX), y: Math.randint(minY, maxY)};
                     if (!allStones.find(s => s.x === stone.x && s.y === stone.y)) {
                         break;
                     }
@@ -280,11 +360,17 @@ phina.define('GameScene', {
             }
 
             white();
+            black();
+            white();
+            black();
 
-            if (level > 1) { black(); }
-            if (level > 2) { white(); black(); }
-            if (level > 3) { white(); black(); }
-            if (level > 4) { white(); black(); }
+            if (size === 13) {
+                white();
+                black();
+            } else if (size === 19) {
+                white();
+                black();
+            }
             
             return {
                 blackStones: blackStones,
@@ -304,12 +390,19 @@ phina.define('GameScene', {
 
             if (userChoise === true && result === "blackWin" || userChoise === false && result === "whiteWin") {
                 combo += 1;
+                if (combo > maxCombo) {
+                    maxCombo = combo;
+                }
             } else {
                 combo = 0;
             }
-            localStorage.setItem("sicho", "{\"combo\":" + combo + "}");
+            const data = {
+                combo: combo,
+                maxCombo: maxCombo,
+            };
+            localStorage.setItem("sicho", JSON.stringify(data));
             comboLabel.text = combo + "連勝中!";
-            const comments = ["", "すごい!", "まさかの!", "驚異的!", "夢の!", "名人!", "前人未踏!", "世界クラス!", "超人的!", "無敵!"];
+            const comments = ["", "すごい!", "まさかの!", "驚異的!", "夢の!", "名人!", "前人未踏!", "世界クラス!", "ミラクル!", "天才的!"];
             if (combo >= 100) {
                 comboCommentLabel.text = "神の領域!";
             } else if (combo >= 10) {
@@ -349,7 +442,7 @@ phina.define('GameScene', {
             fontWeight: 800,
             stroke: "black",
             strokeWidth: 8,
-        }).addChildTo(this).setPosition(this.gridX.center(3), this.gridY.center(2.7)).hide();
+        }).addChildTo(this).setPosition(this.gridX.center(3), this.gridY.center(2.9)).hide();
         backButton.on("pointstart", () => {
             if (!backButton.visible) return;
             if (wait) return;
@@ -370,7 +463,7 @@ phina.define('GameScene', {
             fontWeight: 800,
             stroke: "black",
             strokeWidth: 8,
-        }).addChildTo(this).setPosition(this.gridX.center(5.6), this.gridY.center(2.7)).hide();
+        }).addChildTo(this).setPosition(this.gridX.center(5.6), this.gridY.center(2.9)).hide();
         forwardButton.on("pointstart", () => {
             if (!forwardButton.visible) return;
             if (wait) return;
@@ -402,6 +495,9 @@ phina.define('GameScene', {
                 if (wait) return;
                 // 問題を生成＆表示
                 hideResult();
+                createQuestion();
+                self.ban.remove();
+                createGoban(pages[0].length);
                 showQuestion();
             },
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5)).hide();
@@ -715,13 +811,13 @@ IgoUtil.cloneBanArray = function(banArray) {
     return ret;
 };
 
-function main(initStones) {
+function main(size, initStones) {
 
     const ret = [];
 
-    const startPosition = {x: 2, y: 6};
+    const startPosition = size === 9 ? {x: 2, y: 6} : (size === 13 ? {x: 2, y: 10} : {x: 2, y: 16});
 
-    const banArray = IgoUtil.cloneBanArray(kifu);
+    const banArray = IgoUtil.cloneBanArray(kifu[size === 9 ? 0 : (size === 13 ? 1 : 2)]);
 
     // 問題用の初期配置の石を置く
     initStones.blackStones.forEach(stone => {
@@ -1110,14 +1206,59 @@ function consoleBan(banArray, arry) {
 }
 
 const kifu = [
-    "         ",
-    "         ",
-    "         ",
-    "         ",
-    "         ",
-    " B       ",
-    " BWB     ",
-    "  B      ",
-    "         ",
+    // "         ",
+    // "         ",
+    // "         ",
+    // "         ",
+    // "         ",
+    // " B       ",
+    // " BWB     ",
+    // "  B      ",
+    // "         ",
+    [
+        "         ",
+        "         ",
+        "         ",
+        "         ",
+        "         ",
+        " B       ",
+        " BWB     ",
+        "  B      ",
+        "         ",
+    ], [
+        "             ",
+        "             ",
+        "             ",
+        "             ",
+        "             ",
+        "             ",
+        "             ",
+        "             ",
+        "             ",
+        " B           ",
+        " BWB         ",
+        "  B          ",
+        "             ",
+    ], [
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        "                   ",
+        " B                 ",
+        " BWB               ",
+        "  B                ",
+        "                   ",
+    ]
 ];
 
