@@ -182,7 +182,7 @@ phina.define('GameScene', {
                 var startPoint = Vector2((spanX - floor) * grid.unitWidth, -1 * grid.width / 2),
                     endPoint = Vector2((spanX - floor) * grid.unitWidth, grid.width / 2);
         
-                let strokeWidth = 2;
+                let strokeWidth = size === 9 ? 2 : 1.5;
                 if (spanX === 0 || spanX === size - 1) {
                     strokeWidth = strokeWidth * 2;
                 }
@@ -193,7 +193,7 @@ phina.define('GameScene', {
                 var startPoint = Vector2(-1 * grid.width / 2, (spanY - floor) * grid.unitWidth),
                     endPoint = Vector2(grid.width / 2, (spanY - floor) * grid.unitWidth);
                 
-                let strokeWidth = 2;
+                let strokeWidth = size === 9 ? 2 : 1.5;
                 if (spanY === 0 || spanY === size - 1) {
                     strokeWidth = strokeWidth * 2;
                 }
@@ -248,10 +248,19 @@ phina.define('GameScene', {
         // 石を描画
         function createStone(color, x, y) {
             const floor = Math.floor(self.banLayer.size / 2);
+
+            let grad = Canvas.createRadialGradient(0, 20, 50, self.banLayer.grid.unitWidth / 2, 10, (self.banLayer.grid.unitWidth / 2) * 1.5);
+            if (color === "black") {
+                grad.addColorStop(0.3, "rgb(100, 100, 100)");
+                grad.addColorStop(1, "rgb(0, 0, 0)");
+            } else {
+                grad.addColorStop(0.3, "rgb(255, 255, 255)");
+                grad.addColorStop(1, "rgb(210, 210, 210)");
+            }
             const stone = CircleShape({
-                fill: color,
+                fill: grad,
                 radius: self.banLayer.grid.unitWidth / 2 - 2,
-                strokeWidth: 4,
+                strokeWidth: 3,
                 stroke: "black",
                 x: x,
                 y, y,
