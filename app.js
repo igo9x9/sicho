@@ -80,24 +80,6 @@ phina.define('TitleScene', {
     },
 });
 
-phina.define('MyButton', {
-    superClass: 'Button',
-    init: function(param) {
-        this.superInit(param);
-        const self = this;
-
-        this.on("pointstart", () => {
-            self.tweener.by({y: -20}, 80, "easeOutExpo").wait(10).by({y: 20}, 80, "easeInExpo").wait(100)
-            .call(() => {
-                if (param.callback) {
-                    param.callback();
-                }
-            })
-            .play();
-        })
-    },
-});
-
 phina.define('GameScene', {
     superClass: 'DisplayScene',
     init: function(param/*{}*/) {
@@ -264,17 +246,15 @@ phina.define('GameScene', {
                 grad.addColorStop(1, "rgb(0, 0, 0)");
             } else {
                 if (self.banLayer.size === 9) {
-                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 45);
+                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 40);
                 } else if (self.banLayer.size === 13) {
                     grad = Canvas.createRadialGradient(-10, -10, 0, -5, -5, 25);
                 } else if (self.banLayer.size === 19) {
                     grad = Canvas.createRadialGradient(-5, -5, 0, -5, -5, 20);
                 }
                 grad.addColorStop(0.1, "rgb(255, 255, 255)");
-                grad.addColorStop(0.3, "rgb(255, 255, 255)");
-                grad.addColorStop(0.5, "rgb(255, 255, 255)");
                 grad.addColorStop(0.95, "rgb(150, 150, 150)");
-                grad.addColorStop(1, "rgb(100, 100, 100)");
+                grad.addColorStop(1, "rgb(130, 130, 130)");
             }
             const stone = CircleShape({
                 fill: grad,
@@ -462,47 +442,41 @@ phina.define('GameScene', {
             noButton.show();
         }
 
-        const backButton = Button({
+        const backButton = MyButton({
             text: "<",
             width: 80,
             height: 50,
-            fill: "white",
+            fill: "lavender",
             fontColor: "black",
             fontWeight: 800,
             stroke: "black",
             strokeWidth: 8,
         }).addChildTo(this).setPosition(this.gridX.center(3), this.gridY.center(2.9)).hide();
-        backButton.on("pointstart", () => {
+        backButton.selected = () => {
             if (!backButton.visible) return;
             if (wait) return;
             if (pageIndex === 0) return;
             pageIndex -= 1;
-            backButton.tweener.by({y: -10}, 50).wait(10).by({y: 10}, 50)
-            .call(() => {
-                drawStones(pages[pageIndex]);
-            }).play();
-        });
+            drawStones(pages[pageIndex]);
+        };
 
-        const forwardButton = Button({
+        const forwardButton = MyButton({
             text: ">",
             width: 80,
             height: 50,
-            fill: "white",
+            fill: "lavender",
             fontColor: "black",
             fontWeight: 800,
             stroke: "black",
             strokeWidth: 8,
         }).addChildTo(this).setPosition(this.gridX.center(5.6), this.gridY.center(2.9)).hide();
-        forwardButton.on("pointstart", () => {
+        forwardButton.selected = () => {
             if (!forwardButton.visible) return;
             if (wait) return;
             if (pageIndex === pages.length - 1) return;
             pageIndex += 1;
-            forwardButton.tweener.by({y: -10}, 50).wait(10).by({y: 10}, 50)
-            .call(() => {
-                drawStones(pages[pageIndex]);
-            }).play();
-        });
+            drawStones(pages[pageIndex]);
+        };
 
         const resultLabel = Label({
             text: "",
@@ -519,17 +493,17 @@ phina.define('GameScene', {
             stroke: "black",
             fontColor: "black",
             fontWeight: 800,
-            callback: () => {
-                if (!nextButton.visible) return;
-                if (wait) return;
-                // 問題を生成＆表示
-                hideResult();
-                createQuestion();
-                self.ban.remove();
-                createGoban(pages[0].length);
-                showQuestion();
-            },
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5)).hide();
+        nextButton.selected = () => {
+            if (!nextButton.visible) return;
+            if (wait) return;
+            // 問題を生成＆表示
+            hideResult();
+            createQuestion();
+            self.ban.remove();
+            createGoban(pages[0].length);
+            showQuestion();
+        };
 
         const comboCommentLabel = Label({
             text: "すごい!",
@@ -556,23 +530,23 @@ phina.define('GameScene', {
             stroke: "black",
             fontSize: 40,
             fontWeight: 800,
-            fill: "#00CCFF",
-            callback: () => {
-                if (!yesButton.visible) return;
-                if (wait) return;
-                // 手順を再生
-                drawStonesAuto(pages, 0);
-                userChoise = true;
-                yesButton.hide();
-                noButton.hide();
-    
-                choiseLabel.text = "取れているかな？";
-                choiseLabel.show();
-    
-                helpImage.hide();
-                helpLabel.hide();
-            },
+            fill: "dodgerblue",
         }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(4));
+        yesButton.selected = () => {
+            if (!yesButton.visible) return;
+            if (wait) return;
+            // 手順を再生
+            drawStonesAuto(pages, 0);
+            userChoise = true;
+            yesButton.hide();
+            noButton.hide();
+
+            choiseLabel.text = "取れているかな？";
+            choiseLabel.show();
+
+            helpImage.hide();
+            helpLabel.hide();
+        };
 
         const noButton = MyButton({
             text: "取れていない",
@@ -583,22 +557,22 @@ phina.define('GameScene', {
             fontSize: 40,
             fontWeight: 800,
             fill: "#FF6600",
-            callback: () => {
-                if (wait) return;
-                if (!noButton.visible) return;
-                // 手順を再生
-                drawStonesAuto(pages, 0);
-                userChoise = false;
-                yesButton.hide();
-                noButton.hide();
-    
-                choiseLabel.text = "取れていないかな？";
-                choiseLabel.show();
-    
-                helpImage.hide();
-                helpLabel.hide();
-            },
         }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(4));
+        noButton.selected = () => {
+            if (wait) return;
+            if (!noButton.visible) return;
+            // 手順を再生
+            drawStonesAuto(pages, 0);
+            userChoise = false;
+            yesButton.hide();
+            noButton.hide();
+
+            choiseLabel.text = "取れていないかな？";
+            choiseLabel.show();
+
+            helpImage.hide();
+            helpLabel.hide();
+        };
 
         const choiseLabel = Label({
             text: "",
@@ -1223,6 +1197,53 @@ function main(size, initStones) {
 
 
 }
+
+phina.define('MyButton', {
+    superClass: 'Button',
+    init: function(param) {
+        this.superInit(param);
+
+        const self = this;
+
+        self.pointOn = false;
+
+        const a = PathShape({
+            paths:[Vector2(-1 * this.width/2 + 4, this.height/2 - 2), Vector2(this.width/2 - 4, this.height/2 - 2)],
+            stroke: "black",
+        })
+        .addChildTo(this).setPosition(0, 0);
+        a.alpha = 0.2;
+
+        const b = PathShape({
+            paths:[Vector2(-1 * this.width/2 + 4, - 1 * this.height/2 + 2), Vector2(this.width/2 - 4, -1 * this.height/2 + 2)],
+            stroke: "white",
+        })
+        .addChildTo(this).setPosition(0, 0);
+        b.alpha = 0.2;
+
+        this.selected = null;
+
+        this.on("pointstart", () => {
+            self.pointOn = true;
+            self.tweener.to({scaleX: 0.98, scaleY: 0.98}, 10).play();
+        });
+        this.on("pointend", () => {
+            if (!self.pointOn) return;
+            self.tweener.to({scaleX: 1, scaleY: 1}, 10)
+            .call(() => {
+                if (self.selected) {
+                    self.selected();
+                }
+            })
+            .play();
+        });
+        this.on("pointout", () => {
+            self.pointOn = false;
+            self.tweener.to({scaleX: 1, scaleY: 1}, 10).play();
+        });
+
+    },
+});
 
 function consoleBan(banArray, arry) {
     let text = "+" + "-".padEnd(banArray.length, "-") + "+\n";
