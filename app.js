@@ -264,15 +264,17 @@ phina.define('GameScene', {
                 grad.addColorStop(1, "rgb(0, 0, 0)");
             } else {
                 if (self.banLayer.size === 9) {
-                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 40);
+                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 45);
                 } else if (self.banLayer.size === 13) {
                     grad = Canvas.createRadialGradient(-10, -10, 0, -5, -5, 25);
                 } else if (self.banLayer.size === 19) {
                     grad = Canvas.createRadialGradient(-5, -5, 0, -5, -5, 20);
                 }
                 grad.addColorStop(0.1, "rgb(255, 255, 255)");
+                grad.addColorStop(0.3, "rgb(255, 255, 255)");
+                grad.addColorStop(0.5, "rgb(255, 255, 255)");
                 grad.addColorStop(0.95, "rgb(150, 150, 150)");
-                grad.addColorStop(1, "rgb(130, 130, 130)");
+                grad.addColorStop(1, "rgb(100, 100, 100)");
             }
             const stone = CircleShape({
                 fill: grad,
