@@ -174,6 +174,7 @@ phina.define('GameScene', {
                 strokeWidth: 0,
                 width: 630,
                 height: 630,
+                shadow: "black",
             }).addChildTo(self.baseLayer).setPosition(self.gridX.center(), self.gridY.center(-2.65));
             const grid = Grid({width: self.ban.width - (size === 9 ? 100 : (size === 13 ? 80 : 50)), columns: size - 1});
 
@@ -249,21 +250,38 @@ phina.define('GameScene', {
         function createStone(color, x, y) {
             const floor = Math.floor(self.banLayer.size / 2);
 
-            let grad = Canvas.createRadialGradient(0, 20, 50, self.banLayer.grid.unitWidth / 2, 10, (self.banLayer.grid.unitWidth / 2) * 1.5);
+            let grad;
+
             if (color === "black") {
-                grad.addColorStop(0.3, "rgb(100, 100, 100)");
+                if (self.banLayer.size === 9) {
+                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 15);
+                } else if (self.banLayer.size === 13) {
+                    grad = Canvas.createRadialGradient(-10, -10, 0, -5, -5, 10);
+                } else if (self.banLayer.size === 19) {
+                    grad = Canvas.createRadialGradient(-5, -5, 0, -5, -5, 5);
+                }
+                grad.addColorStop(0.2, "rgb(80, 80, 80)");
                 grad.addColorStop(1, "rgb(0, 0, 0)");
             } else {
-                grad.addColorStop(0.3, "rgb(255, 255, 255)");
-                grad.addColorStop(1, "rgb(210, 210, 210)");
+                if (self.banLayer.size === 9) {
+                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 40);
+                } else if (self.banLayer.size === 13) {
+                    grad = Canvas.createRadialGradient(-10, -10, 0, -5, -5, 25);
+                } else if (self.banLayer.size === 19) {
+                    grad = Canvas.createRadialGradient(-5, -5, 0, -5, -5, 20);
+                }
+                grad.addColorStop(0.1, "rgb(255, 255, 255)");
+                grad.addColorStop(0.95, "rgb(150, 150, 150)");
+                grad.addColorStop(1, "rgb(130, 130, 130)");
             }
             const stone = CircleShape({
                 fill: grad,
                 radius: self.banLayer.grid.unitWidth / 2 - 2,
-                strokeWidth: 3,
-                stroke: "black",
+                strokeWidth: 0,
                 x: x,
                 y, y,
+                shadow: color === "white" ? "black" : "transparent",
+                shadowBlur: 3,
             });
             stone.addChildTo(self.banLayer).setPosition(self.banLayer.grid.span(x - floor), self.banLayer.grid.span(y - floor));
         };
@@ -536,6 +554,7 @@ phina.define('GameScene', {
             stroke: "black",
             fontSize: 40,
             fontWeight: 800,
+            fill: "#00CCFF",
             callback: () => {
                 if (!yesButton.visible) return;
                 if (wait) return;
@@ -561,7 +580,7 @@ phina.define('GameScene', {
             stroke: "black",
             fontSize: 40,
             fontWeight: 800,
-            fill: "Chocolate",
+            fill: "#FF6600",
             callback: () => {
                 if (wait) return;
                 if (!noButton.visible) return;
