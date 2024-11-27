@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.5";
+const version = "1.6";
 
-const info = "連勝し続けると\nたまに盤面が広くなるようになりました";
+const info = "盤面が広い場合には\n再生速度を速くしました";
 
 let wait = false;
 
@@ -304,11 +304,13 @@ phina.define('GameScene', {
                 return;
             }
 
+            const timing = (pages[0].length > 9 && pageIndex < (pages.length * 2 / 3)) ? 50 : 200;
+
             setTimeout(function() {
                 const page = pages[pageIndex];
                 drawStones(page);
                 drawStonesAuto(pages, pageIndex + 1);
-            }, 200);
+            }, timing);
 
         }
 
@@ -1225,7 +1227,7 @@ phina.define('MyButton', {
 
         this.on("pointstart", () => {
             self.pointOn = true;
-            self.tweener.to({scaleX: 0.98, scaleY: 0.98}, 10).play();
+            self.tweener.to({scaleX: 0.95, scaleY: 0.95}, 10).play();
         });
         this.on("pointend", () => {
             if (!self.pointOn) return;
