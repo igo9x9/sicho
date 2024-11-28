@@ -92,9 +92,8 @@ phina.define('CreateQuestionScene', {
             height: this.height,
             fill: "black",
         });
-        box.alpha = 0;
+        box.alpha = 0.6;
         box.addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
-        box.tweener.to({alpha: 0.8}, 200).play();
 
         Label({
             text: "問題を作成中...",
