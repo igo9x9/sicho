@@ -182,6 +182,9 @@ phina.define('GameScene', {
             if (combo !== 0) {
                 helpImage.hide();
                 helpLabel.hide();
+            } else {
+                helpImage.show();
+                helpLabel.show();
             }
     
             wait = false;
