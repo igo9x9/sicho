@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.6";
+const version = "1.7";
 
-const info = "盤面が広い場合には\n再生速度を速くしました";
+const info = "補助線を表示できるように\nなりました";
 
 let wait = false;
 
@@ -75,8 +75,29 @@ phina.define('TitleScene', {
             fontSize: 20,
             fill: "black",
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(5));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6));
 
+    },
+});
+
+phina.define('CreateQuestionScene', {
+    superClass: 'DisplayScene',
+    init: function(param/*{question: , size: , initStone: }*/) {
+        this.superInit(param);
+
+        const self = this;
+
+        this.backgroundColor = "rgba(0, 0, 0, 0.7)";
+
+        Label({
+            text: "考え中...",
+            fill: "white",
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+    },
+    update: function () {
+        if (!wait) {
+            this.exit();
+        }
     },
 });
 
@@ -111,7 +132,7 @@ phina.define('GameScene', {
         }).addChildTo(this).setPosition(0, 0);
 
         // 説明文
-        const helpImage = Sprite("arrow").addChildTo(this).setPosition(260, 480).setRotation(90);
+        const helpImage = Sprite("arrow").addChildTo(this).setPosition(260, 480).setRotation(90).hide();
         const helpLabel = LabelArea({
             text: "この白石は\nシチョウで取れていますか？",
             fontSize: 28,
@@ -121,11 +142,7 @@ phina.define('GameScene', {
             height: 100,
             stroke: "black",
             strokeWidth: 5,
-        }).addChildTo(this).setPosition(450, 600);
-        if (combo !== 0) {
-            helpImage.hide();
-            helpLabel.hide();
-        }
+        }).addChildTo(this).setPosition(450, 600).hide();
 
         const titleButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7));
         titleButton.setInteractive(true);
@@ -138,14 +155,31 @@ phina.define('GameScene', {
 
         // --------------------------------------------------------------
 
-        // 問題を生成
-        createQuestion();
+        wait = true;
+        setTimeout(function() {
+            App.pushScene(CreateQuestionScene());
+        }, 1);
 
-        // 碁盤を表示
-        createGoban(pages[0].length);
+        // 碁盤を表示（初回用）
+        const level = String(combo).slice(-1) === "8" ? 1 : (String(combo).slice(-1) === "9" ? 2 : 0);
+        const size = level === 0 ? 9 : (level === 1 ? 13 : 19);
+        createGoban(size);
 
-        // 問題を表示
-        showQuestion();
+        setTimeout(function() {
+            // 問題を生成
+            createQuestion();
+
+            // 問題を表示
+            showQuestion();
+
+            if (combo !== 0) {
+                helpImage.hide();
+                helpLabel.hide();
+            }
+    
+            wait = false;
+        }, 500);
+
         
         // 碁盤を描画
         function createGoban(size) {
@@ -225,6 +259,26 @@ phina.define('GameScene', {
             self.banLayer.size = size;
             self.banLayer.grid = grid;
 
+            // 補助線用レイヤ
+            self.witnessLineLayer = RectangleShape({
+                fill: "transparent",
+                strokeWidth: 0,
+                width: self.ban.width,
+                height: self.ban.height,
+            }).addChildTo(self.ban).setPosition(0, 0).hide();
+
+            PathShape({
+                paths:[Vector2(-1 * grid.width/2 + grid.unitWidth, grid.width/2 - 3 * grid.unitWidth), Vector2(grid.width/2 - 2 * grid.unitWidth, -1 * grid.width/2)],
+                stroke: "yellow",
+                strokeWidth: 10,
+            }).addChildTo(self.witnessLineLayer);
+
+            PathShape({
+                paths:[Vector2(-1 * grid.width/2 + 3 * grid.unitWidth, grid.width/2 - 2 * grid.unitWidth), Vector2(grid.width/2, -1 * grid.width/2 + grid.unitWidth)],
+                stroke: "yellow",
+                strokeWidth: 10,
+            }).addChildTo(self.witnessLineLayer);
+
             return;
         }
 
@@ -272,14 +326,14 @@ phina.define('GameScene', {
         function createQuestion() {
             const level = String(combo).slice(-1) === "8" ? 1 : (String(combo).slice(-1) === "9" ? 2 : 0);
             const size = level === 0 ? 9 : (level === 1 ? 13 : 19);
-            // @@
-            const initStones = createQuestionStones(level);
-            // const initStones = {blackStones:[], whiteStones:[]};
-            // const initStones = {blackStones:[{x:4, y: 3}, {x: 7, y: 2}], whiteStones:[{x:5,y:4},{x:5,y:1}]};
             let mainRet;
             while (true) {
+                // @@
+                const initStones = createQuestionStones(level);
+                // const initStones = {blackStones:[], whiteStones:[]};
+                // const initStones = {blackStones:[{x:4, y: 3}, {x: 7, y: 2}], whiteStones:[{x:5,y:4},{x:5,y:1}]};
                 mainRet = main(size, initStones);
-                if (mainRet.status !== "cancel") {
+                if (mainRet.result !== "cancel") {
                     break;
                 }
             }
@@ -392,12 +446,18 @@ phina.define('GameScene', {
 
         // UI
 
+        let witness = false;
+
         function showResult() {
             choiseLabel.hide();
 
             backButton.show();
             forwardButton.show();
             nextButton.show();
+
+            witness = false;
+            witnessButton.hide();
+            self.witnessLineLayer.hide();
 
             if (userChoise === true && result === "blackWin" || userChoise === false && result === "whiteWin") {
                 combo += 1;
@@ -442,6 +502,7 @@ phina.define('GameScene', {
 
             yesButton.show();
             noButton.show();
+            witnessButton.show();
         }
 
         const backButton = MyButton({
@@ -462,6 +523,31 @@ phina.define('GameScene', {
             drawStones(pages[pageIndex]);
         };
 
+        const witnessButton = MyButton({
+            text: "補助線",
+            width: 150,
+            height: 50,
+            fill: "lavender",
+            fontColor: "black",
+            fontWeight: 800,
+            stroke: "black",
+            strokeWidth: 8,
+        }).addChildTo(this).setPosition(this.gridX.center(5), this.gridY.center(3));
+        witnessButton.selected = () => {
+            if (witness) {
+                self.witnessLineLayer.hide();
+            } else {
+                self.witnessLineLayer.show();
+            }
+            witness = !witness;
+        };
+
+        const resultLabel = Label({
+            text: "",
+            fontSize: 90,
+            fontWeight: 800,
+        }).addChildTo(self).setPosition(this.gridX.center(), this.gridY.center(4.5)).hide();;
+
         const forwardButton = MyButton({
             text: ">",
             width: 80,
@@ -480,12 +566,6 @@ phina.define('GameScene', {
             drawStones(pages[pageIndex]);
         };
 
-        const resultLabel = Label({
-            text: "",
-            fontSize: 90,
-            fontWeight: 800,
-        }).addChildTo(self).setPosition(this.gridX.center(), this.gridY.center(4.5)).hide();;
-
         const nextButton = MyButton({
             text: "次の問題",
             width: 230,
@@ -499,12 +579,21 @@ phina.define('GameScene', {
         nextButton.selected = () => {
             if (!nextButton.visible) return;
             if (wait) return;
-            // 問題を生成＆表示
-            hideResult();
-            createQuestion();
-            self.ban.remove();
-            createGoban(pages[0].length);
-            showQuestion();
+
+            wait = true;
+            setTimeout(function() {
+                App.pushScene(CreateQuestionScene());
+            }, 1);
+    
+            setTimeout(function() {
+                // 問題を生成＆表示
+                hideResult();
+                createQuestion();
+                self.ban.remove();
+                createGoban(pages[0].length);
+                showQuestion();
+                wait = false;
+            }, 500);
         };
 
         const comboCommentLabel = Label({
@@ -533,7 +622,7 @@ phina.define('GameScene', {
             fontSize: 40,
             fontWeight: 800,
             fill: "dodgerblue",
-        }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(4));
+        }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(5));
         yesButton.selected = () => {
             if (!yesButton.visible) return;
             if (wait) return;
@@ -542,6 +631,7 @@ phina.define('GameScene', {
             userChoise = true;
             yesButton.hide();
             noButton.hide();
+            witnessButton.hide();
 
             choiseLabel.text = "取れているかな？";
             choiseLabel.show();
@@ -559,7 +649,7 @@ phina.define('GameScene', {
             fontSize: 40,
             fontWeight: 800,
             fill: "#FF6600",
-        }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(4));
+        }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(5));
         noButton.selected = () => {
             if (wait) return;
             if (!noButton.visible) return;
@@ -568,6 +658,7 @@ phina.define('GameScene', {
             userChoise = false;
             yesButton.hide();
             noButton.hide();
+            witnessButton.hide();
 
             choiseLabel.text = "取れていないかな？";
             choiseLabel.show();
@@ -836,6 +927,8 @@ function main(size, initStones) {
 
     consoleBan(banArray, ret);
 
+    const startTime = new Date().getTime();
+
     const banArray2 = IgoUtil.cloneBanArray(banArray);
     const result = playToEnd(banArray2, true);
 
@@ -855,6 +948,16 @@ function main(size, initStones) {
     function playToEnd(banArray, isOutput, nextIsBlack) {
 
         let depth = 0;
+
+        // １秒以上経過していたら中止
+        const min = ((new Date().getTime()) - startTime) / 1000;
+        if (min > 1) {
+            return {
+                status: "cancel",
+                banArray: null,
+                depth: depth,
+            };
+        }
 
         // 探索の深さが50を超えたら中止する（コウで無限ループになっている可能性）
         if (depth > 50) {
@@ -1000,7 +1103,7 @@ function main(size, initStones) {
         console.log("白番、黒を抜く手を試してみる", nukiPosition);
         const ret1 = playToEnd(banArray1, false, true);
         // 探索限界チェック
-        if (ret1.status === "cancenl") {
+        if (ret1.status === "cancel") {
             return {
                 status: "cancel",
                 depth: depth,
@@ -1013,7 +1116,7 @@ function main(size, initStones) {
         console.log("白番、逃げる手を試してみる", spaceArray[0]);
         const ret2 = playToEnd(banArray2, false, true);
         // 探索限界チェック
-        if (ret1.status === "cancenl") {
+        if (ret2.status === "cancel") {
             return {
                 status: "cancel",
                 depth: depth,
@@ -1135,7 +1238,7 @@ function main(size, initStones) {
             console.log("黒番、パターン１を試してみる");
             const ret1 = playToEnd(banArray1, false);
             // 探索限界チェック
-            if (ret1.status === "cancenl") {
+            if (ret1.status === "cancel") {
                 return {
                     status: "cancel",
                     depth: depth,
@@ -1147,7 +1250,7 @@ function main(size, initStones) {
             console.log("黒番、パターン２を試してみる");
             const ret2 = playToEnd(banArray2, false);
             // 探索限界チェック
-            if (ret2.status === "cancenl") {
+            if (ret2.status === "cancel") {
                 return {
                     status: "cancel",
                     depth: depth,
@@ -1231,6 +1334,7 @@ phina.define('MyButton', {
         });
         this.on("pointend", () => {
             if (!self.pointOn) return;
+            if (!self.visible) return;
             self.tweener.to({scaleX: 1, scaleY: 1}, 10)
             .call(() => {
                 if (self.selected) {
