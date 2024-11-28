@@ -82,17 +82,25 @@ phina.define('TitleScene', {
 
 phina.define('CreateQuestionScene', {
     superClass: 'DisplayScene',
-    init: function(param/*{question: , size: , initStone: }*/) {
+    init: function(param/*{}*/) {
         this.superInit(param);
 
         const self = this;
 
-        this.backgroundColor = "rgba(0, 0, 0, 0.7)";
+        const box = RectangleShape({
+            width: this.width,
+            height: this.height,
+            fill: "black",
+        });
+        box.alpha = 0;
+        box.addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+        box.tweener.to({alpha: 0.8}, 200).play();
 
         Label({
-            text: "考え中...",
+            text: "問題を作成中...",
+            fontSize: 40,
             fill: "white",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-1));
     },
     update: function () {
         if (!wait) {
@@ -187,10 +195,10 @@ phina.define('GameScene', {
             // 外枠
             self.ban = RectangleShape({
                 fill: "Peru",
-                strokeWidth: 0,
                 width: 630,
                 height: 630,
-                shadow: "black",
+                stroke: "black",
+                strokeWidth: 1,
             }).addChildTo(self.baseLayer).setPosition(self.gridX.center(), self.gridY.center(-2.65));
             const grid = Grid({width: self.ban.width - (size === 9 ? 100 : (size === 13 ? 80 : 50)), columns: size - 1});
 
@@ -358,7 +366,7 @@ phina.define('GameScene', {
                 return;
             }
 
-            const timing = (pages[0].length > 9 && pageIndex < (pages.length * 2 / 3)) ? 50 : 200;
+            const timing = (pages[0].length > 9 && pageIndex < (pages.length * 2 / 3)) ? 50 : (combo >= 10 ? 100 : 200);
 
             setTimeout(function() {
                 const page = pages[pageIndex];
@@ -532,7 +540,7 @@ phina.define('GameScene', {
             fontWeight: 800,
             stroke: "black",
             strokeWidth: 8,
-        }).addChildTo(this).setPosition(this.gridX.center(5), this.gridY.center(3));
+        }).addChildTo(this).setPosition(this.gridX.center(5), this.gridY.center(2.9));
         witnessButton.selected = () => {
             if (witness) {
                 self.witnessLineLayer.hide();
