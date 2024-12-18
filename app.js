@@ -1431,16 +1431,19 @@ phina.define('KiokuGameScene', {
 
         const blackPrisonerLabel = Label({
             text: "黒アゲハマ：0",
+            // fill: "white",
         }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(3.5));
 
         const whitePrisonerLabel = Label({
             text: "白アゲハマ：0",
+            // fill: "white",
         }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(3.5));
 
         const totalPrisonerLabel = Label({
             text: "アゲハマ合計：0",
             fontWeight: 800,
             fontSize: 40,
+            // fill: "white",
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4.7));
 
         function initPrisonerLabel() {
@@ -1456,8 +1459,8 @@ phina.define('KiokuGameScene', {
 
             const box = RectangleShape({
                 width: self.width - 50,
-                height: self.height - 300,
-                fill: "rgba(255,255,255,0.8)",
+                height: self.height - 250,
+                fill: "rgba(255,255,255,0.9)",
                 cornerRadius: 10,
                 stroke: "black",
                 strokeWidth: 15,
@@ -1476,10 +1479,10 @@ phina.define('KiokuGameScene', {
                 width: box.width - 50,
                 height: box.height - 50,
             }).addChildTo(box).setPosition(0, 100);
-            label.text = "黒番も白番もあなたが自由に打ってください。そして、できるだけ多くの石を取ってください。\n\nただし、碁石はすぐに見えなくなります。着手禁止点に打ってしまうと、ゲームオーバーです。";
+            label.text = "黒番も白番もあなたが自由に打ってください。そして、できるだけ多くの石を取ってください。\n\nただし、碁石はすぐに見えなくなります。着手禁止点に打ってしまうと、ゲームオーバーです。\n\nゴールはありません。";
 
             box.setInteractive(true);
-            box.on("pointstart", () => {
+            self.one("pointstart", () => {
                 box.remove();
                 titleButton.show();
                 gameOver = false;
@@ -1524,6 +1527,7 @@ phina.define('KiokuGameScene', {
             }
             totalPrisonerLabel.text = "アゲハマ合計：" + (black_prisoner + white_prisoner);
             function animation(baseLabel, point) {
+                baseLabel.tweener.by({y: -10}, 50).by({y: 10}, 50).play();
                 const label = Label({
                     text: "+" + point,
                     fontWeight: 800,
