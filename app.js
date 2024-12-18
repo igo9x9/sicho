@@ -1,8 +1,8 @@
 phina.globalize();
 
-const version = "1.7";
+const version = "1.8";
 
-const info = "補助線を表示できるように\nなりました";
+const info = "新コンテンツ「記憶力を鍛える」\nを追加しました";
 
 let wait = false;
 
@@ -16,66 +16,87 @@ phina.define('TitleScene', {
         this.backgroundColor = "PeachPuff";
 
         Label({
-            text: "シチョウを読む練習",
-            fontSize: 50,
+            text: "囲碁筋トレ",
+            fontSize: 100,
             fill: "black",
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-3));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-5));
 
         Label({
             text: "version " + version,
             fontSize: 20,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-2.3));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-3.9));
 
         Label({
             text: info,
             fontSize: 22,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-2.5));
 
-        this.setInteractive(true);
-        this.on("pointstart", () => {
-            mouse.tweener.by({y:-20}, 100).by({y:20}, 100)
-            .call(function() {
-                self.exit("GameScene");
-            }).play();
-        });
+        // this.setInteractive(true);
+        // this.on("pointstart", () => {
+        //     mouse.tweener.by({y:-20}, 100).by({y:20}, 100)
+        //     .call(function() {
+        //         self.exit("GameScene");
+        //     }).play();
+        // });
 
-        const mouse = Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+        // const mouse = Sprite("mouse").addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
 
-        const saveData = localStorage.getItem("sicho");
-        if (saveData) {
-            const data = JSON.parse(saveData);
-            const combo = data.combo;
+        const sichoButton = MyButton({
+            text: "シチョウを読む練習",
+            fontWeight: 800,
+            width: 500,
+            height: 100,
+            fill: "Tomato",
+            stroke: "black",
+            strokeWidth: 10,
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+        sichoButton.selected = () => {
+            self.exit("SichoGameScene");
+        };
+        const sichoSaveData = localStorage.getItem("sicho");
+        if (sichoSaveData) {
+            const data = JSON.parse(sichoSaveData);
             const maxCombo = data.maxCombo;
 
             if (maxCombo > 1) {
                 Label({
-                    text: "最高記録 " + maxCombo + "連勝",
+                    text: "最高記録 " + maxCombo + "連勝! ",
                     fontSize: 20,
-                    // fontWeight: 800,
-                    fill: "black",
-                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1));
-            }
-
-            if (combo > 1) {
-                Label({
-                    text: combo + "連勝中!",
-                    fontSize: 35,
                     fontWeight: 800,
-                    fill: "darkred",
-                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1.6));
+                    fill: "black",
+                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1.2));
             }
 
         }
 
-        Label({
-            text: "TAP TO START",
-            fontSize: 20,
-            fill: "black",
+        const kiokuButton = MyButton({
+            text: "記憶力を鍛える",
             fontWeight: 800,
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6));
+            width: 500,
+            height: 100,
+            fill: "ForestGreen",
+            stroke: "black",
+            strokeWidth: 10,
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(3));
+        kiokuButton.selected = () => {
+            self.exit("KiokuGameScene");
+        };
+        const kiokuSaveData = localStorage.getItem("kioku");
+        if (kiokuSaveData) {
+
+            if (kiokuSaveData > 0) {
+                Label({
+                    text: "最高記録 " + kiokuSaveData + "個! ",
+                    fontSize: 20,
+                    fontWeight: 800,
+                    fill: "black",
+                }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4.2));
+            }
+
+        }
 
     },
 });
@@ -108,7 +129,7 @@ phina.define('CreateQuestionScene', {
     },
 });
 
-phina.define('GameScene', {
+phina.define('SichoGameScene', {
     superClass: 'DisplayScene',
     init: function(param/*{}*/) {
         this.superInit(param);
@@ -707,8 +728,12 @@ phina.main(function() {
                 className: 'TitleScene',
             },
             {
-                label: 'GameScene',
-                className: 'GameScene',
+                label: 'SichoGameScene',
+                className: 'SichoGameScene',
+            },
+            {
+                label: 'KiokuGameScene',
+                className: 'KiokuGameScene',
             },
         ],
     });
@@ -1312,6 +1337,767 @@ function main(size, initStones) {
 
 
 }
+
+
+phina.define('KiokuGameScene', {
+    superClass: 'DisplayScene',
+    init: function(param/*{}*/) {
+        this.superInit(param);
+
+        const self = this;
+
+        this.backgroundColor = "PeachPuff";
+
+        let gameOver = false;
+
+        const SPACE = 0;
+        const BLACK = 1;
+        const WHITE = 2;
+        const OUT = 3;
+        const BOARD_SIZE = 9;
+
+        /* 手数 */
+        let move = 1;
+
+        /* アゲハマ */
+        let black_prisoner = 0;
+        let white_prisoner = 0;
+
+        /* 劫の位置 */
+        let ko_x = 0;
+        let ko_y = 0;
+
+        /* 劫が発生した手数 */
+        let ko_num = 0;
+
+        /* 合法手かどうか調べるのに使う */
+        let checkBoard = Array(BOARD_SIZE + 2);
+        console.log(checkBoard);
+
+        self.baseLayer = RectangleShape({
+            fill: "transparent",
+            strokeWidth: 0,
+            width: this.width,
+            height: this.height,
+        }).addChildTo(this).setPosition(0, 0);
+
+        createGoban(BOARD_SIZE);
+
+        createTapArea();
+
+        let nextColor = "black";
+
+        // 碁盤
+        const board = [];
+
+        initBoard();
+
+        const resetButton = MyButton({
+            text: "リトライ",
+            width: 270,
+            height: 80,
+            strokeWidth: 10,
+            stroke: "black",
+            fontSize: 40,
+            fontWeight: 800,
+            fill: "Chocolate",
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5)).hide();
+        resetButton.selected = () => {
+            self.banLayer.children.clear();
+            black_prisoner = 0;
+            white_prisoner = 0;
+            nextColor = "black";
+            initPrisonerLabel();
+            initBoard();
+            gameOver = false;
+            resetButton.hide();
+        };
+
+        const titleButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7)).hide();
+        titleButton.setInteractive(true);
+        titleButton.on("pointstart", () => {
+            titleButton.tweener.by({y:-20}, 100).by({y:20}, 100)
+            .call(function() {
+                self.exit("TitleScene");
+            }).play();
+        });
+
+        const blackPrisonerLabel = Label({
+            text: "黒アゲハマ：0",
+        }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(3.5));
+
+        const whitePrisonerLabel = Label({
+            text: "白アゲハマ：0",
+        }).addChildTo(this).setPosition(this.gridX.center(4), this.gridY.center(3.5));
+
+        const totalPrisonerLabel = Label({
+            text: "アゲハマ合計：0",
+            fontWeight: 800,
+            fontSize: 40,
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4.7));
+
+        function initPrisonerLabel() {
+            blackPrisonerLabel.text = "黒アゲハマ：0";
+            whitePrisonerLabel.text = "白アゲハマ：0";
+            totalPrisonerLabel.text = "アゲハマ合計：0";
+        }
+
+        // ゲームの説明
+        function showHowTo() {
+
+            gameOver = true;
+
+            const box = RectangleShape({
+                width: self.width - 50,
+                height: self.height - 300,
+                fill: "rgba(255,255,255,0.8)",
+                cornerRadius: 10,
+                stroke: "black",
+                strokeWidth: 15,
+            }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center());
+
+            Label({
+                text: "遊び方",
+                fontWeight: 800,
+                fontSize: 50,
+            }).addChildTo(box).setPosition(0, -1 * box.height / 2 + 60);
+
+            const label = LabelArea({
+                text: "",
+                fontSize: 40,
+                fontWeight: 800,
+                width: box.width - 50,
+                height: box.height - 50,
+            }).addChildTo(box).setPosition(0, 100);
+            label.text = "黒番も白番もあなたが打ちます。できるだけ多くの石を取ることが目標です。\n\nただし、打った石はすぐに見えなくなります。着手禁止点に打ってしまうとゲームオーバーです。";
+
+            box.setInteractive(true);
+            box.on("pointstart", () => {
+                box.remove();
+                titleButton.show();
+                gameOver = false;
+            });
+
+        }
+
+        showHowTo();
+
+        // GAME OVER
+        function showGameOver() {
+            const gameOverLabel = Label({
+                text: "GAME\nOVER",
+                fontSize: 150,
+                fontWeight: 800,
+                fill: "white",
+                stroke: "red",
+                strokeWidth: 20,
+            }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center(-2));
+
+            gameOverLabel.tweener.wait(1000).to({x: self.gridX.span(25)}, 100)
+            .call(() => gameOverLabel.remove())
+            .play();
+            resetButton.show();
+
+            const data = localStorage.getItem("kioku");
+            const prisoner = black_prisoner + white_prisoner;
+            if (!data || data < prisoner) {
+                localStorage.setItem("kioku", prisoner);
+            }
+
+        }
+
+        // アゲハマ表示の更新
+        function updatePrisonerLabel(color, addPoint) {
+            if (color === BLACK) {
+                blackPrisonerLabel.text = "黒アゲハマ：" + black_prisoner;
+                animation(blackPrisonerLabel, addPoint);
+            } else {
+                whitePrisonerLabel.text = "白アゲハマ：" + white_prisoner;
+                animation(whitePrisonerLabel, addPoint);
+            }
+            totalPrisonerLabel.text = "アゲハマ合計：" + (black_prisoner + white_prisoner);
+            function animation(baseLabel, point) {
+                const label = Label({
+                    text: "+" + point,
+                    fontWeight: 800,
+                    fontSize: 50,
+                    fill: "red",
+                    stroke: "white",
+                    strokeWidth: 10,
+                }).addChildTo(self).setPosition(baseLabel.x + baseLabel.width + 20, baseLabel.y - 20);
+                label.tweener.by({y: -20}, 1000).call(() => {
+                    label.remove();
+                }).play();
+            }
+        }
+
+        /*------------------------------------------------------------------*/
+        /* 座標(x,y)のcolor石を碁盤から取り除き、取った石の数を返す         */
+        /*------------------------------------------------------------------*/
+        function doRemoveStone(color, x, y, prisoner) {
+
+            /* 取り除かれる石と同じ色ならば石を取る */
+            if (board[y][x] === color) {
+
+                /* 取った石の数を１つ増やす */
+                prisoner++;
+
+                /* その座標に空点を置く */
+                board[y][x] = SPACE;
+
+                /* 左を調べる */
+                if( x > 1 ){
+                    prisoner = doRemoveStone( color, x-1, y, prisoner );
+                }
+                /* 上を調べる */
+                if( y > 1 ){
+                    prisoner = doRemoveStone( color, x, y-1, prisoner );
+                }
+                /* 右を調べる */
+                if( x < (BOARD_SIZE) ){
+                    prisoner = doRemoveStone( color, x+1, y, prisoner );
+                }
+                /* 下を調べる */
+                if( y < (BOARD_SIZE) ){
+                    prisoner = doRemoveStone( color, x, y+1, prisoner );
+                }
+            }
+
+            /* 取った石の数を返す */
+            return prisoner;
+        }
+
+        /*------------------------------------------------------------------*/
+        /* チェック用の碁盤をクリア                                         */
+        /*------------------------------------------------------------------*/
+        function clearCheckBoard() {
+
+            let x, y;
+
+            for( y = 1; y < (BOARD_SIZE + 2 - 1); y++ ) {
+                checkBoard[y] = [];
+                for( x = 1; x < (BOARD_SIZE + 2 - 1); x++ ) {
+                    checkBoard[y][x] = false;
+                }
+            }
+        }        
+
+        /*------------------------------------------------------------------*/
+        /* 座標(x,y)にあるcolor石が相手に囲まれているか調べる               */
+        /* 空点があればFALSEを返し、空点がなければTRUEを返す */
+        /*------------------------------------------------------------------*/
+        function doCheckRemoveStone(color,x,y )
+        {
+            let rtn;
+
+            /* その場所は既に調べた点ならおしまい */  
+            if( checkBoard[y][x] === true ){
+                return true;
+            }
+            
+            /* 調べたことをマークする */
+            checkBoard[y][x] = true;
+
+            /* 何も置かれていないならばおしまい */
+            if( board[y][x] === SPACE ){
+                return false;
+            }
+
+            /* 同じ色の石ならばその石の隣も調べる */  
+            if( board[y][x] === color ){
+
+                /* その石の左(x-1,y)を調べる */
+                if ( x > 1 ) {
+                    rtn = doCheckRemoveStone( color, x-1, y );
+                    if( rtn === false ){
+                        return false;
+                    }
+                }
+
+                /* その石の上(x,y-1)を調べる */
+                if ( y > 1 ){
+                    rtn = doCheckRemoveStone( color, x, y-1 );
+                    if( rtn === false ){
+                        return false;
+                    }
+                }
+
+                /* その石の右(x+1,y)を調べる */
+                if ( x < (BOARD_SIZE) ){
+                    rtn = doCheckRemoveStone( color, x+1, y );
+                    if( rtn === false ){
+                        return false;
+                    }
+                }
+
+                /* その石の下(x,y+1)を調べる */
+                if ( y < (BOARD_SIZE) ){
+                    rtn = doCheckRemoveStone( color, x, y+1 );
+                    if( rtn === false ){
+                        return false;
+                    }
+                }
+            }
+
+            /* 相手の色の石があった */  
+            return true;
+        }
+
+        /*------------------------------------------------------------------*/
+        /* 座標(x,y)の石が死んでいれば碁盤から取り除く                      */
+        /*------------------------------------------------------------------*/
+        function removeStone(color, x, y)
+        {
+
+            let prisoner;  /* 取り除かれた石数 */
+
+            /* 置いた石と同じ色なら取らない */
+            if( board[y][x] === color ){
+                return 0;
+            }
+
+            /* 空点なら取らない */
+            if( board[y][x] === SPACE ){
+                return 0;
+            }
+
+            /* マークのクリア */
+            clearCheckBoard();
+
+            /* 囲まれているなら取る */
+            if (doCheckRemoveStone(board[y][x], x, y) === true) {
+                prisoner = doRemoveStone(board[y][x], x, y, 0);
+                return prisoner;
+            }
+
+            return 0;
+        }
+
+        // 碁盤に石を置く
+        function setStone(color, x, y) {
+
+            let prisonerN = 0;      /* 取り除かれた石の数（上） */
+            let prisonerE = 0;      /* 取り除かれた石の数（右） */
+            let prisonerS = 0;      /* 取り除かれた石の数（下） */
+            let prisonerW = 0;      /* 取り除かれた石の数（左） */
+            let prisonerAll = 0;    /* 取り除かれた石の総数 */
+            let koFlag = false;     /* 劫かどうか */
+
+            /* 座標(x,y)に石を置く */
+            board[y][x] = color;
+
+            /* 置いた石の隣に同じ色の石はあるか？ */
+            if( board[y + 1][x] !== color &&
+                board[y - 1][x] !== color &&
+                board[y][x + 1] !== color &&
+                board[y][x - 1] !== color ){
+                /* 同じ色の石がないならば劫かもしれない */
+                koFlag = true;
+            } else {
+                /* 同じ色の石があるならば劫ではない */
+                koFlag = false;
+            }
+
+            /* 置いた石の周囲の相手の石が死んでいれば碁盤から取り除く */
+            if (y > 1) {
+                prisonerN = removeStone(color, x, y - 1);
+            }
+            if (x > 1) {
+                prisonerW = removeStone(color, x - 1, y);
+            }
+            if (y < BOARD_SIZE) {
+                prisonerS = removeStone(color, x, y + 1) ;
+            }
+            if (x < BOARD_SIZE) {
+                prisonerE = removeStone(color, x + 1, y) ;
+            }
+
+            /* 取り除かれた石の総数 */
+            prisonerAll = prisonerN + prisonerE + prisonerS + prisonerW;
+
+            /* 置いた石の隣に同じ色の石がなく、取り除かれた石も１つならば劫 */
+            if (koFlag === true && prisonerAll === 1){
+
+                /* 劫の発生した手数を覚える */
+                ko_num = move;
+
+                /* 劫の座標を覚える */
+                if (prisonerE === 1) {
+                    /* 取り除かれた石が右 */
+                    ko_x = x + 1;
+                    ko_y = y;
+                } else if (prisonerS === 1) {
+                    /* 取り除かれた石が下 */
+                    ko_x = x;
+                    ko_y = y + 1;
+                } else if (prisonerW === 1) {
+                    /* 取り除かれた石が左 */
+                    ko_x = x - 1;
+                    ko_y = y;
+                } else if (prisonerN === 1){
+                    /* 取り除かれた石が上 */
+                    ko_x = x;
+                    ko_y = y - 1;
+                }
+            }
+
+            /* アゲハマの更新 */
+            if (prisonerAll > 0){
+                if (color === BLACK) {
+                    black_prisoner += prisonerAll;
+                    updatePrisonerLabel(color, prisonerAll);
+                } else if (color === WHITE ){
+                    white_prisoner += prisonerAll;
+                    updatePrisonerLabel(color, prisonerAll);
+                }
+            }
+        }
+
+        // 合法手かどうか調べる
+        function checkLegal(color, x, y) {
+
+            // 空点じゃないと置けません
+            if (board[y][x] !== SPACE){
+                console.log("空点じゃないと置けません", board[y][x]);
+                return false;
+            }
+
+            /* 一手前に劫を取られていたら置けません */
+            if (move > 1) {
+                if(ko_x === x && ko_y === y && ko_num === (move - 1)){
+                    console.log("一手前に劫を取られていたら置けません", board[y][x]);
+                    return false;
+                }
+            }
+
+            /* 自殺手なら置けません */
+            if (checkSuicide( color, x, y ) === true) {
+                console.log("自殺手なら置けません", board[y][x]);
+                return false;
+            }
+
+            return true;
+
+        }
+
+        /*------------------------------------------------------------------*/
+        /* 自殺手かどうか調べる                                             */
+        /*------------------------------------------------------------------*/
+        function checkSuicide(color, x, y )
+        {
+
+            let rtnVal;
+            let opponent = color === BLACK ? WHITE : BLACK;  /* 相手の色 */
+
+            /* 仮に石を置く */
+            board[y][x] = color;
+
+            /* マークのクリア */
+            clearCheckBoard();
+
+            /* その石は相手に囲まれているか調べる */
+            rtnVal = doCheckRemoveStone(color, x, y );
+
+            /* 囲まれているならば自殺手の可能性あり */
+            if ( rtnVal === true ) {
+
+                /* その石を置いたことにより、隣の相手の石が取れるなら自殺手ではない */
+                if( x > 1 ){
+                    /* 隣は相手？ */
+                    if( board[y][x-1] === opponent ) {
+                        /* マークのクリア */
+                        clearCheckBoard();
+                        /* 相手の石は囲まれているか？ */
+                        rtnVal = doCheckRemoveStone( opponent, x - 1, y );
+                        /* 相手の石を取れるので自殺手ではない */
+                        if( rtnVal == true ){
+                            /* 盤を元に戻す */
+                            board[y][x] = SPACE;
+                            return false;
+                        }
+                    }
+                }
+
+                if( y > 1 ){
+                    /* 隣は相手？ */
+                    if( board[y-1][x] === opponent ){
+                        /* マークのクリア */
+                        clearCheckBoard();
+                        /* 相手の石は囲まれているか？ */
+                        rtnVal = doCheckRemoveStone( opponent, x, y-1 );
+                        /* 相手の石を取れるので自殺手ではない */
+                        if( rtnVal == true ){
+                            /* 盤を元に戻す */
+                            board[y][x] = SPACE;
+                            return false;
+                        }
+                    }
+                }
+
+                if( x < BOARD_SIZE ){
+                    /* 隣は相手？ */
+                    if( board[y][x+1] == opponent ){
+                        /* マークのクリア */
+                        clearCheckBoard();
+                        /* 相手の石は囲まれているか？ */
+                        rtnVal = doCheckRemoveStone( opponent, x+1, y );
+                        /* 相手の石を取れるので自殺手ではない */
+                        if( rtnVal == true ){
+                            /* 盤を元に戻す */
+                            board[y][x] = SPACE;
+                            return false;
+                        }
+                    }
+                }
+
+                if( y < BOARD_SIZE ){
+                    /* 隣は相手？ */
+                    if( board[y+1][x] == opponent ){
+                        /* マークのクリア */
+                        clearCheckBoard();
+                        /* 相手の石は囲まれているか？ */
+                        rtnVal = doCheckRemoveStone( opponent, x, y+1 );
+                        /* 相手の石を取れるので自殺手ではない */
+                        if( rtnVal == true ){
+                            /* 盤を元に戻す */
+                            board[y][x] = SPACE;
+                            return false;
+                        }
+                    }
+                }
+
+                /* 盤を元に戻す */
+                board[y][x] = SPACE;
+
+                /* 相手の石を取れないなら自殺手 */
+                return true;
+
+            } else {
+
+                /* 盤を元に戻す */
+                board[y][x] = SPACE;
+
+                /* 囲まれていないので自殺手ではない */
+                return false;
+            }
+        }
+
+
+        // 碁盤を初期化
+        function initBoard() {
+            for (let y = 0; y < BOARD_SIZE + 2; y++) {
+                board[y] = [];
+                for (let x = 0; x < BOARD_SIZE + 2; x++) {
+                    board[y][x] = SPACE;
+                }
+            }
+            for (let y = 0; y < BOARD_SIZE + 2; y++) {
+                board[y][0] = OUT;
+                board[y][BOARD_SIZE + 2 - 1] = OUT;
+                board[0][y] = OUT;
+                board[BOARD_SIZE + 2 - 1][y] = OUT;
+            }
+        }
+
+        // 盤面を表示する
+        function showAllStones() {
+
+            for (let y = 1; y < BOARD_SIZE + 1; y++) {
+                for (let x = 1; x < BOARD_SIZE + 1; x++) {
+                    if (board[y][x] === BLACK) {
+                        drawStone("black", x - 1, y - 1, true);
+                    } else if (board[y][x] === WHITE) {
+                        drawStone("white", x - 1, y - 1, true);
+                    }
+                }
+            }
+        }
+
+        // 碁盤を描画
+        function createGoban(size) {
+
+            // 外枠
+            self.ban = RectangleShape({
+                fill: "Peru",
+                width: 630,
+                height: 630,
+                stroke: "black",
+                strokeWidth: 1,
+            }).addChildTo(self.baseLayer).setPosition(self.gridX.center(), self.gridY.center(-2.65));
+            const grid = Grid({width: self.ban.width - (size === 9 ? 100 : (size === 13 ? 80 : 50)), columns: size - 1});
+
+            const floor = Math.floor(size / 2);
+            (size).times(function(spanX) {
+                var startPoint = Vector2((spanX - floor) * grid.unitWidth, -1 * grid.width / 2),
+                    endPoint = Vector2((spanX - floor) * grid.unitWidth, grid.width / 2);
+        
+                let strokeWidth = size === 9 ? 2 : 1.5;
+                if (spanX === 0 || spanX === size - 1) {
+                    strokeWidth = strokeWidth * 2;
+                }
+                PathShape({paths:[startPoint, endPoint], stroke: "black", strokeWidth: strokeWidth}).addChildTo(self.ban);
+            });
+        
+            (size).times(function(spanY) {
+                var startPoint = Vector2(-1 * grid.width / 2, (spanY - floor) * grid.unitWidth),
+                    endPoint = Vector2(grid.width / 2, (spanY - floor) * grid.unitWidth);
+                
+                let strokeWidth = size === 9 ? 2 : 1.5;
+                if (spanY === 0 || spanY === size - 1) {
+                    strokeWidth = strokeWidth * 2;
+                }
+                PathShape({paths:[startPoint, endPoint], stroke: "black", strokeWidth: strokeWidth}).addChildTo(self.ban);
+            });
+
+            if (size === 9) {
+                addStar(2, 2);
+                addStar(6, 2);
+                addStar(4, 4);
+                addStar(2, 6);
+                addStar(6, 6);
+            } else if (size === 13) {
+                addStar(3, 3);
+                addStar(9, 3);
+                addStar(6, 6);
+                addStar(3, 9);
+                addStar(9, 9);
+            } else if (size === 19) {
+                addStar(3, 3);
+                addStar(9, 3);
+                addStar(15, 3);
+                addStar(3, 9);
+                addStar(9, 9);
+                addStar(15, 9);
+                addStar(3, 15);
+                addStar(9, 15);
+                addStar(15, 15);
+            }
+
+            function addStar(spanX, spanY) {
+                CircleShape({
+                    radius: 5,
+                    fill: "black",
+                    strokeWidth: 0,
+                }).addChildTo(self.ban).setPosition((spanX - floor) * grid.unitWidth, (spanY - floor) * grid.unitWidth);
+            }
+
+            self.banLayer = RectangleShape({
+                fill: "transparent",
+                strokeWidth: 0,
+                width: self.ban.width,
+                height: self.ban.height,
+            }).addChildTo(self.ban).setPosition(0, 0);
+
+            self.banLayer.size = size;
+            self.banLayer.grid = grid;
+
+            self.tapLayer = RectangleShape({
+                fill: "transparent",
+                strokeWidth: 0,
+                width: self.ban.width,
+                height: self.ban.height,
+            }).addChildTo(self.ban).setPosition(0, 0);
+
+            return;
+        }
+
+        // 石を置くタップ領域を作成
+        function createTapArea() {
+            const size = self.banLayer.size;
+            const floor = Math.floor(size / 2);
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const area = CircleShape({
+                        fill: "transparent",
+                        radius: self.banLayer.grid.unitWidth / 2 - 2,
+                        strokeWidth: 0,
+                    });
+                    area.addChildTo(self.tapLayer).setPosition(self.banLayer.grid.span(x - floor), self.banLayer.grid.span(y - floor));
+                    area.setInteractive(true);
+                    area.on("pointstart", () => {
+                        if (gameOver) return;
+                        const xx = x + 1;
+                        const yy = y + 1;
+                        const color_num = (nextColor === "black" ? BLACK : WHITE);
+                        if (checkLegal(color_num, xx, yy)) {
+                            drawStone(nextColor, x, y);
+                            setStone(color_num, xx, yy);
+                            if (nextColor === "black") {
+                                nextColor = "white";
+                            } else {
+                                nextColor = "black";
+                            }
+                            console.log(board);
+                            move += 1;
+                        } else {
+                            self.ban.tweener
+                            .by({x: 10}, 50).by({x: -10}, 50)
+                            .by({x: 10}, 50).by({x: -10}, 50)
+                            .by({x: 10}, 50).by({x: -10}, 50)
+                            .wait(200)
+                            .call(() => {
+                                showGameOver();
+                            })
+                            .play();
+                            showAllStones();
+                            gameOver = true;
+                        }
+                    });
+                }
+            }
+        }
+
+        // 石を描画
+        function drawStone(color, x, y, show) {
+            const floor = Math.floor(self.banLayer.size / 2);
+
+            let grad;
+
+            if (color === "black") {
+                if (self.banLayer.size === 9) {
+                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 15);
+                } else if (self.banLayer.size === 13) {
+                    grad = Canvas.createRadialGradient(-10, -10, 0, -5, -5, 10);
+                } else if (self.banLayer.size === 19) {
+                    grad = Canvas.createRadialGradient(-5, -5, 0, -5, -5, 5);
+                }
+                grad.addColorStop(0.2, "rgb(80, 80, 80)");
+                grad.addColorStop(1, "rgb(0, 0, 0)");
+            } else {
+                if (self.banLayer.size === 9) {
+                    grad = Canvas.createRadialGradient(-15, -15, 0, -10, -10, 40);
+                } else if (self.banLayer.size === 13) {
+                    grad = Canvas.createRadialGradient(-10, -10, 0, -5, -5, 25);
+                } else if (self.banLayer.size === 19) {
+                    grad = Canvas.createRadialGradient(-5, -5, 0, -5, -5, 20);
+                }
+                grad.addColorStop(0.1, "rgb(255, 255, 255)");
+                grad.addColorStop(0.95, "rgb(150, 150, 150)");
+                grad.addColorStop(1, "rgb(130, 130, 130)");
+            }
+            const stone = CircleShape({
+                fill: grad,
+                radius: self.banLayer.grid.unitWidth / 2 - 2,
+                strokeWidth: 0,
+                x: x,
+                y, y,
+                shadow: color === "white" ? "black" : "transparent",
+                shadowBlur: 3,
+            });
+            stone.addChildTo(self.banLayer).setPosition(self.banLayer.grid.span(x - floor), self.banLayer.grid.span(y - floor));
+
+            if (!show) {
+                stone.tweener.to({alpha: 0}, 500)
+                .call(() => {
+                    stone.remove();
+                })
+                .play();
+            }
+        };
+    },
+
+});
 
 phina.define('MyButton', {
     superClass: 'Button',
