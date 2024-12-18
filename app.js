@@ -2,7 +2,7 @@ phina.globalize();
 
 const version = "1.8";
 
-const info = "新コンテンツ「記憶力を鍛える」\nを追加しました";
+const info = "「目隠し碁で記憶力を鍛える」\nというコンテンツを追加しました";
 
 let wait = false;
 
@@ -16,8 +16,8 @@ phina.define('TitleScene', {
         this.backgroundColor = "PeachPuff";
 
         Label({
-            text: "囲碁筋トレ",
-            fontSize: 100,
+            text: "囲碁のヨミの訓練",
+            fontSize: 65,
             fill: "black",
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-5));
@@ -26,7 +26,7 @@ phina.define('TitleScene', {
             text: "version " + version,
             fontSize: 20,
             fill: "black",
-        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-3.9));
+        }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-4));
 
         Label({
             text: info,
@@ -64,7 +64,7 @@ phina.define('TitleScene', {
             if (maxCombo > 1) {
                 Label({
                     text: "最高記録 " + maxCombo + "連勝! ",
-                    fontSize: 20,
+                    fontSize: 25,
                     fontWeight: 800,
                     fill: "black",
                 }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1.2));
@@ -73,7 +73,7 @@ phina.define('TitleScene', {
         }
 
         const kiokuButton = MyButton({
-            text: "記憶力を鍛える",
+            text: "目隠し碁で記憶力を鍛える",
             fontWeight: 800,
             width: 500,
             height: 100,
@@ -90,7 +90,7 @@ phina.define('TitleScene', {
             if (kiokuSaveData > 0) {
                 Label({
                     text: "最高記録 " + kiokuSaveData + "個! ",
-                    fontSize: 20,
+                    fontSize: 25,
                     fontWeight: 800,
                     fill: "black",
                 }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(4.2));
@@ -1404,13 +1404,20 @@ phina.define('KiokuGameScene', {
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5)).hide();
         resetButton.selected = () => {
             self.banLayer.children.clear();
+
+            // 各種変数の初期化
             black_prisoner = 0;
             white_prisoner = 0;
+            move = 1;
+            ko_x = 0;
+            ko_y = 0;
+            ko_num = 0;
+
             nextColor = "black";
             initPrisonerLabel();
             initBoard();
-            gameOver = false;
             resetButton.hide();
+            gameOver = false;
         };
 
         const titleButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7)).hide();
@@ -1469,7 +1476,7 @@ phina.define('KiokuGameScene', {
                 width: box.width - 50,
                 height: box.height - 50,
             }).addChildTo(box).setPosition(0, 100);
-            label.text = "黒番も白番もあなたが打ちます。できるだけ多くの石を取ることが目標です。\n\nただし、打った石はすぐに見えなくなります。着手禁止点に打ってしまうとゲームオーバーです。";
+            label.text = "黒番も白番もあなたが自由に打ってください。そして、できるだけ多くの石を取ってください。\n\nただし、碁石はすぐに見えなくなります。着手禁止点に打ってしまうと、ゲームオーバーです。";
 
             box.setInteractive(true);
             box.on("pointstart", () => {
@@ -2028,7 +2035,6 @@ phina.define('KiokuGameScene', {
                             } else {
                                 nextColor = "black";
                             }
-                            console.log(board);
                             move += 1;
                         } else {
                             self.ban.tweener
@@ -2088,7 +2094,7 @@ phina.define('KiokuGameScene', {
             stone.addChildTo(self.banLayer).setPosition(self.banLayer.grid.span(x - floor), self.banLayer.grid.span(y - floor));
 
             if (!show) {
-                stone.tweener.to({alpha: 0}, 500)
+                stone.tweener.to({alpha: 0}, 1000, "easeInOutCirc")
                 .call(() => {
                     stone.remove();
                 })
