@@ -2,7 +2,7 @@ phina.globalize();
 
 const version = "1.8";
 
-const info = "「目隠し碁で記憶力を鍛える」\nというコンテンツを追加しました";
+const info = "「目隠し碁で記憶力を訓練」\nというコンテンツを追加しました";
 
 let wait = false;
 
@@ -16,8 +16,8 @@ phina.define('TitleScene', {
         this.backgroundColor = "PeachPuff";
 
         Label({
-            text: "囲碁のヨミの訓練",
-            fontSize: 65,
+            text: "ヨミの基礎訓練",
+            fontSize: 70,
             fill: "black",
             fontWeight: 800,
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(-5));
@@ -59,6 +59,7 @@ phina.define('TitleScene', {
         const sichoSaveData = localStorage.getItem("sicho");
         if (sichoSaveData) {
             const data = JSON.parse(sichoSaveData);
+            const combo = data.combo;
             const maxCombo = data.maxCombo;
 
             if (maxCombo > 1) {
@@ -70,10 +71,20 @@ phina.define('TitleScene', {
                 }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(1.2));
             }
 
+            if (combo > 1) {
+                Label({
+                    text: combo + "連勝中!",
+                    fontWeight: 800,
+                    fontSize: 30,
+                    fill: "crimson",
+                    stroke: "white",
+                    strokeWidth: 4,
+                }).addChildTo(sichoButton).setPosition(-220, -35).setRotation(-25);
+            }
         }
 
         const kiokuButton = MyButton({
-            text: "目隠し碁で記憶力を鍛える",
+            text: "目隠し碁で記憶力を訓練",
             fontWeight: 800,
             width: 500,
             height: 100,
@@ -1349,6 +1360,7 @@ phina.define('KiokuGameScene', {
         this.backgroundColor = "PeachPuff";
 
         let gameOver = false;
+        let howTo = true;
 
         const SPACE = 0;
         const BLACK = 1;
@@ -1400,7 +1412,7 @@ phina.define('KiokuGameScene', {
             stroke: "black",
             fontSize: 40,
             fontWeight: 800,
-            fill: "Chocolate",
+            fill: "ForestGreen",
         }).addChildTo(this).setPosition(this.gridX.center(), this.gridY.center(6.5)).hide();
         resetButton.selected = () => {
             self.banLayer.children.clear();
@@ -1423,6 +1435,7 @@ phina.define('KiokuGameScene', {
         const titleButton = Sprite("mouse2").addChildTo(this).setPosition(this.gridX.center(6), this.gridY.center(7)).hide();
         titleButton.setInteractive(true);
         titleButton.on("pointstart", () => {
+            if (howTo) return;
             titleButton.tweener.by({y:-20}, 100).by({y:20}, 100)
             .call(function() {
                 self.exit("TitleScene");
@@ -1479,13 +1492,14 @@ phina.define('KiokuGameScene', {
                 width: box.width - 50,
                 height: box.height - 50,
             }).addChildTo(box).setPosition(0, 100);
-            label.text = "黒番も白番もあなたが自由に打ってください。そして、できるだけ多くの石を取ってください。\n\nただし、碁石はすぐに見えなくなります。着手禁止点に打ってしまうと、ゲームオーバーです。\n\nゴールはありません。";
+            label.text = "黒番も白番も、あなたが自由に打ってください。そして、できるだけ多くの石を取ってください。\n\nただし、碁石はすぐに見えなくなります。着手禁止点に打ってしまうと、ゲームオーバーです。\n\nゴールはありません。";
 
             box.setInteractive(true);
             self.one("pointstart", () => {
                 box.remove();
                 titleButton.show();
                 gameOver = false;
+                howTo = false;
             });
 
         }
@@ -1493,7 +1507,7 @@ phina.define('KiokuGameScene', {
         showHowTo();
 
         // GAME OVER
-        function showGameOver() {
+        function showGameOver(reason) {
             const gameOverLabel = Label({
                 text: "GAME\nOVER",
                 fontSize: 150,
@@ -1504,8 +1518,23 @@ phina.define('KiokuGameScene', {
             }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center(-2));
 
             gameOverLabel.tweener.wait(1000).to({x: self.gridX.span(25)}, 100)
-            .call(() => gameOverLabel.remove())
+            .call(() => {
+                gameOverLabel.remove();
+
+                const reasonLabel = Label({
+                    text: reason === 1 ? "すでに石があります" : "着手禁止点です",
+                    fontSize: 50,
+                    fontWeight: 800,
+                    fill: "white",
+                    stroke: "black",
+                    strokeWidth: 20,
+                }).addChildTo(self).setPosition(self.gridX.center(), self.gridY.center(-2));
+                reasonLabel.tweener.wait(1000).to({x: self.gridX.span(25)}, 100)
+                .call(() => reasonLabel.remove())
+                .play();
+            })
             .play();
+
             resetButton.show();
 
             const data = localStorage.getItem("kioku");
@@ -1531,7 +1560,7 @@ phina.define('KiokuGameScene', {
                 const label = Label({
                     text: "+" + point,
                     fontWeight: 800,
-                    fontSize: 50,
+                    fontSize: 50 + addPoint,
                     fill: "red",
                     stroke: "white",
                     strokeWidth: 10,
@@ -1765,29 +1794,30 @@ phina.define('KiokuGameScene', {
         }
 
         // 合法手かどうか調べる
+        // 戻り値 0:合法 1:空点ではない 2:着手禁止点
         function checkLegal(color, x, y) {
 
             // 空点じゃないと置けません
             if (board[y][x] !== SPACE){
                 console.log("空点じゃないと置けません", board[y][x]);
-                return false;
+                return 1;
             }
 
             /* 一手前に劫を取られていたら置けません */
             if (move > 1) {
                 if(ko_x === x && ko_y === y && ko_num === (move - 1)){
                     console.log("一手前に劫を取られていたら置けません", board[y][x]);
-                    return false;
+                    return 2;
                 }
             }
 
             /* 自殺手なら置けません */
             if (checkSuicide( color, x, y ) === true) {
                 console.log("自殺手なら置けません", board[y][x]);
-                return false;
+                return 2;
             }
 
-            return true;
+            return 0;
 
         }
 
@@ -2031,7 +2061,8 @@ phina.define('KiokuGameScene', {
                         const xx = x + 1;
                         const yy = y + 1;
                         const color_num = (nextColor === "black" ? BLACK : WHITE);
-                        if (checkLegal(color_num, xx, yy)) {
+                        const legal = checkLegal(color_num, xx, yy);
+                        if (legal === 0) {
                             drawStone(nextColor, x, y);
                             setStone(color_num, xx, yy);
                             if (nextColor === "black") {
@@ -2047,7 +2078,7 @@ phina.define('KiokuGameScene', {
                             .by({x: 10}, 50).by({x: -10}, 50)
                             .wait(200)
                             .call(() => {
-                                showGameOver();
+                                showGameOver(legal);
                             })
                             .play();
                             showAllStones();
